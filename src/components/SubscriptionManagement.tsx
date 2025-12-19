@@ -24,6 +24,7 @@ export default function SubscriptionManagement() {
   const [members, setMembers] = useState<Member[]>([]);
   const [seats, setSeats] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [error, setError] = useState<string>('');
   const [form, setForm] = useState({
     memberId: '',
     seatNumber: '',
@@ -42,21 +43,48 @@ export default function SubscriptionManagement() {
   }, []);
 
   const fetchMembers = async () => {
-    const res = await fetch('/api/members');
-    const data = await res.json();
-    setMembers(data);
+    try {
+      const res = await fetch('/api/members');
+      if (res.ok) {
+        const data = await res.json();
+        setMembers(data);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setError(errorData.error || 'Failed to fetch members');
+      }
+    } catch (error) {
+      setError('Network error fetching members');
+    }
   };
 
   const fetchSeats = async () => {
-    const res = await fetch('/api/seats');
-    const data = await res.json();
-    setSeats(data);
+    try {
+      const res = await fetch('/api/seats');
+      if (res.ok) {
+        const data = await res.json();
+        setSeats(data);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setError(errorData.error || 'Failed to fetch seats');
+      }
+    } catch (error) {
+      setError('Network error fetching seats');
+    }
   };
 
   const fetchSubscriptions = async () => {
-    const res = await fetch('/api/subscriptions');
-    const data = await res.json();
-    setSubscriptions(data);
+    try {
+      const res = await fetch('/api/subscriptions');
+      if (res.ok) {
+        const data = await res.json();
+        setSubscriptions(data);
+      } else {
+        const errorData = await res.json();
+        setError(errorData.error || 'Failed to fetch subscriptions');
+      }
+    } catch (error) {
+      setError('Network error fetching subscriptions');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,6 +115,7 @@ export default function SubscriptionManagement() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Subscription Management</h1>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
       <form onSubmit={handleSubmit} className="mb-4 grid grid-cols-2 gap-2">
         <select
           value={form.memberId}

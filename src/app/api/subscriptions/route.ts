@@ -33,26 +33,31 @@ function calculateEndDate(start: Date, duration: string) {
 }
 
 export async function GET() {
+  try {
+    console.log('Connecting to DB for subscriptions...');
+    await dbConnect();
+    console.log('DB connected for subscriptions.');
 
-  await dbConnect();
+    const subscriptions = await Subscription.find()
+      .populate('member', 'name email')
+      .populate('seat', 'seatNumber')
+      .populate('payments');
 
-  const subscriptions = await Subscription.find()
-
-    .populate('member', 'name email')
-
-    .populate('seat', 'seatNumber')
-
-    .populate('payments');
-
-  return NextResponse.json(subscriptions);
-
+    return NextResponse.json(subscriptions);
+  } catch (error) {
+    console.error('Error in GET /api/subscriptions:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch subscriptions';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
+  try {
+    console.log('Connecting to DB for new subscription...');
+    await dbConnect();
+    console.log('DB connected for subscription.');
 
-  await dbConnect();
-
-  const { memberId, seatNumber, startDate, duration, amount, paymentMethod, upiCode, dateTime } = await request.json();
+    const { memberId, seatNumber, startDate, duration, amount, paymentMethod, upiCode, dateTime } = await request.json();
 
   const seat = await Seat.findOne({ seatNumber });
 
@@ -161,5 +166,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(subscription);
 
   }
-
+  } catch (error) {
+    console.error('Error in POST /api/subscriptions:', error);
+    const message = error instanceof Error ? error.message : 'Failed to create subscription';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
