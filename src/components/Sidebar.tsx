@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Home, Users, CreditCard, BarChart3, MapPin } from 'lucide-react';
+import { Home, Users, CreditCard, BarChart3, MapPin, DollarSign } from 'lucide-react';
 
 export default function Sidebar() {
   return (
@@ -17,6 +17,10 @@ export default function Sidebar() {
         <Link href="/members" className="flex items-center space-x-2 p-2 rounded hover:bg-gray-700">
           <Users size={20} />
           <span>Members</span>
+        </Link>
+        <Link href="/expenses" className="flex items-center space-x-2 p-2 rounded hover:bg-gray-700">
+          <DollarSign size={20} />
+          <span>Expenses</span>
         </Link>
         <Link href="/reports" className="flex items-center space-x-2 p-2 rounded hover:bg-gray-700">
           <BarChart3 size={20} />

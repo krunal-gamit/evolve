@@ -4,24 +4,143 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import { DollarSign, Users, TrendingUp, BarChart3, Eye, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState, useEffect, useMemo } from 'react';
 
 export default function Dashboard() {
 
-  // Mock data for the dashboard
-  const revenueData = [
-    { month: 'Jan', revenue: 0, expenses: 2000 },
-    { month: 'Feb', revenue: 4000, expenses: 3000 },
-    { month: 'Mar', revenue: 8000, expenses: 4000 },
-    { month: 'Apr', revenue: 12000, expenses: 5000 },
-    { month: 'May', revenue: 16000, expenses: 6000 },
-    { month: 'Jun', revenue: 14000, expenses: 5500 },
-  ];
+  const [members, setMembers] = useState<any[]>([]);
+  const [seats, setSeats] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [filterType, setFilterType] = useState<'total' | 'thisMonth' | 'previousMonth'>('total');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
 
-  const transactions = [
-    { name: 'Rahul Feb Fee', date: '2024-02-01', amount: '+₹3500' },
-    { name: 'Jan Bill', date: '2024-02-05', amount: '-₹1200' },
-    { name: 'Priya Feb Fee', date: '2024-02-01', amount: '+₹3500' },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [membersRes, seatsRes, subsRes, expensesRes] = await Promise.all([
+          fetch('/api/members'),
+          fetch('/api/seats'),
+          fetch('/api/subscriptions'),
+          fetch('/api/expenses')
+        ]);
+        const m = await membersRes.json();
+        const s = await seatsRes.json();
+        const subs = await subsRes.json();
+        const exp = await expensesRes.json();
+        setMembers(m);
+        setSeats(s);
+        setSubscriptions(subs);
+        setExpenses(exp);
+        // Extract and sort payments
+        const allPayments = subs.flatMap((sub: any) => sub.payments || []).sort((a: any, b: any) => +new Date(b.dateTime) - +new Date(a.dateTime));
+        setPayments(allPayments);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (filterType === 'previousMonth' && !selectedMonth) {
+      const now = new Date();
+      const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      setSelectedMonth(d.toISOString().slice(0, 7));
+    }
+  }, [filterType, selectedMonth]);
+
+  // Calculate metrics
+  const totalSeats = seats.length;
+  const occupiedSeats = seats.filter(seat => seat.status === 'occupied').length;
+  const occupancyRate = totalSeats > 0 ? ((occupiedSeats / totalSeats) * 100).toFixed(1) : '0.0';
+  const activeMembers = members.length; // Assuming all are active
+
+  // Current month revenue and expenses
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthlyRevenue = payments.filter(p => new Date(p.dateTime).toISOString().slice(0, 7) === currentMonth).reduce((sum, p) => sum + p.amount, 0);
+  const monthlyExpenses = expenses.filter(e => new Date(e.date).toISOString().slice(0, 7) === currentMonth).reduce((sum, e) => sum + e.amount, 0);
+  const netProfit = monthlyRevenue - monthlyExpenses;
+
+  // Previous months revenue and expenses
+  const previousRevenue = payments.filter(p => new Date(p.dateTime).toISOString().slice(0, 7) !== currentMonth).reduce((sum, p) => sum + p.amount, 0);
+  const previousExpenses = expenses.filter(e => new Date(e.date).toISOString().slice(0, 7) !== currentMonth).reduce((sum, e) => sum + e.amount, 0);
+
+  // Previous months options
+  const previousMonthsOptions = useMemo(() => {
+    const options = [];
+    const now = new Date();
+    for (let i = 1; i <= 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStr = d.toISOString().slice(0, 7);
+      const label = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      options.push({ value: monthStr, label });
+    }
+    return options;
+  }, []);
+
+  // Display values based on filter
+  let displayRevenue = 0;
+  let displayExpenses = 0;
+  if (filterType === 'total') {
+    displayRevenue = monthlyRevenue + previousRevenue;
+    displayExpenses = monthlyExpenses + previousExpenses;
+  } else if (filterType === 'thisMonth') {
+    displayRevenue = monthlyRevenue;
+    displayExpenses = monthlyExpenses;
+  } else if (filterType === 'previousMonth' && selectedMonth) {
+    displayRevenue = payments.filter(p => new Date(p.dateTime).toISOString().slice(0, 7) === selectedMonth).reduce((sum, p) => sum + p.amount, 0);
+    displayExpenses = expenses.filter(e => new Date(e.date).toISOString().slice(0, 7) === selectedMonth).reduce((sum, e) => sum + e.amount, 0);
+  }
+  const displayProfit = displayRevenue - displayExpenses;
+
+  // Revenue chart data (last 6 months)
+  const revenueData = useMemo(() => {
+    const now = new Date();
+    const months = [];
+    for (let i = 4; i >= -1; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toISOString().slice(0, 7));
+    }
+    return months.map(month => {
+      const rev = payments.filter(p => new Date(p.dateTime).toISOString().slice(0, 7) === month).reduce((sum, p) => sum + p.amount, 0);
+      const exp = expenses.filter(e => new Date(e.date).toISOString().slice(0, 7) === month).reduce((sum, e) => sum + e.amount, 0);
+      return { month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short' }), revenue: rev, expenses: exp };
+    });
+  }, [payments, expenses]);
+
+  // Recent transactions
+  const paymentTxns = payments.map(p => ({
+    name: p.uniqueCode,
+    date: new Date(p.dateTime),
+    amount: `+₹${p.amount}`,
+    type: 'payment'
+  }));
+  const expenseTxns = expenses.map(e => ({
+    name: e.description,
+    date: new Date(e.date),
+    amount: `-₹${e.amount}`,
+    type: 'expense'
+  }));
+  const allTxns = [...paymentTxns, ...expenseTxns].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 3);
+  const transactions = allTxns.map(t => ({
+    name: t.name,
+    date: t.date.toLocaleDateString(),
+    amount: t.amount
+  }));
+
+  // Exam preparation distribution
+  const examCounts: {[key: string]: number} = {};
+  members.forEach(m => {
+    const prep = m.examPrep || 'Other';
+    examCounts[prep] = (examCounts[prep] || 0) + 1;
+  });
+  const totalExams = members.length;
+  const examData = Object.entries(examCounts).map(([prep, count]: [string, number]) => ({
+    prep,
+    percentage: totalExams > 0 ? Math.round((count / totalExams) * 100) : 0
+  }));
 
   return (
     <div className="flex h-screen">
@@ -30,13 +149,47 @@ export default function Dashboard() {
         <Header pageTitle="Dashboard" />
         <div className="flex-1 p-6 overflow-auto bg-gray-50">
 
+        {/* Filter */}
+        <div className="mb-6 flex space-x-2 items-center">
+          <button
+            onClick={() => setFilterType('total')}
+            className={`px-4 py-2 rounded-lg font-medium ${filterType === 'total' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+          >
+            Total
+          </button>
+          <button
+            onClick={() => setFilterType('thisMonth')}
+            className={`px-4 py-2 rounded-lg font-medium ${filterType === 'thisMonth' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+          >
+            This Month
+          </button>
+          <button
+            onClick={() => setFilterType('previousMonth')}
+            className={`px-4 py-2 rounded-lg font-medium ${filterType === 'previousMonth' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+          >
+            Previous Months
+          </button>
+          {filterType === 'previousMonth' && (
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-3 py-2 border rounded-lg ml-2"
+            >
+              <option value="">Select Month</option>
+              {previousMonthsOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Monthly Revenue</p>
-                <p className="text-2xl font-semibold">₹7,000</p>
+                <p className="text-sm text-gray-600">Revenue</p>
+                <p className="text-2xl font-semibold">₹{displayRevenue.toLocaleString()}</p>
               </div>
               <DollarSign className="h-8 w-8 text-green-500" />
             </div>
@@ -44,9 +197,9 @@ export default function Dashboard() {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Occupancy Rate</p>
-                <p className="text-2xl font-semibold">6.3%</p>
-                <p className="text-xs text-gray-500">3/48 Desks</p>
+                <p className="text-sm text-gray-600">Current Occupancy</p>
+                <p className="text-2xl font-semibold">{occupancyRate}%</p>
+                <p className="text-xs text-gray-500">{occupiedSeats}/{totalSeats} Seats</p>
                 <p className="text-xs text-green-600">+3 this week</p>
               </div>
               <BarChart3 className="h-8 w-8 text-blue-500" />
@@ -55,8 +208,8 @@ export default function Dashboard() {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Active Students</p>
-                <p className="text-2xl font-semibold">11</p>
+                <p className="text-sm text-gray-600">Active Members</p>
+                <p className="text-2xl font-semibold">{activeMembers}</p>
                 <p className="text-xs text-red-600">-₹500 vs last m</p>
               </div>
               <Users className="h-8 w-8 text-purple-500" />
@@ -65,8 +218,17 @@ export default function Dashboard() {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Net Profit</p>
-                <p className="text-2xl font-semibold">₹5,800</p>
+                <p className="text-sm text-gray-600">Expenses</p>
+                <p className="text-2xl font-semibold">₹{displayExpenses.toLocaleString()}</p>
+              </div>
+              <DollarSign className="h-8 w-8 text-red-500" />
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Profit</p>
+                <p className="text-2xl font-semibold">₹{displayProfit.toLocaleString()}</p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-500" />
             </div>
@@ -83,8 +245,8 @@ export default function Dashboard() {
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip />
-              <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
-              <Line type="monotone" dataKey="expenses" stroke="#82ca9d" strokeWidth={2} />
+              <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
+              <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -94,20 +256,17 @@ export default function Dashboard() {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-xl font-light mb-4">Student Exam Focus</h2>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span>UPSC</span>
-                <span className="text-sm text-gray-500">60%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '60%' }}></div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>JEE</span>
-                <span className="text-sm text-gray-500">40%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '40%' }}></div>
-              </div>
+              {examData.map((exam, index) => (
+                <div key={exam.prep}>
+                  <div className="flex items-center justify-between">
+                    <span>{exam.prep}</span>
+                    <span className="text-sm text-gray-500">{exam.percentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${exam.percentage}%` }}></div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -136,16 +295,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           {/* Occupancy Heatmap */}
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-xl font-light mb-4">Occupancy Heatmap</h2>
             <div className="grid grid-cols-8 gap-1">
-              {Array.from({ length: 48 }, (_, i) => (
+              {seats.map(seat => (
                 <div
-                  key={i}
-                  className={`w-6 h-6 rounded ${i % 2 === 0 ? 'bg-green-200' : 'bg-red-200'}`}
-                  title={i % 2 === 0 ? 'Vacant' : 'Occupied'}
+                  key={seat._id}
+                  className={`w-6 h-6 rounded ${seat.status === 'occupied' ? 'bg-red-200' : 'bg-green-200'}`}
+                  title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
                 ></div>
               ))}
             </div>
@@ -158,28 +317,6 @@ export default function Dashboard() {
                 <div className="w-4 h-4 bg-red-200 rounded mr-2"></div>
                 <span className="text-sm">Occ</span>
               </div>
-            </div>
-          </div>
-
-          {/* Peak Hours Analysis */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h2 className="text-xl font-light mb-4">Peak Hours Analysis</h2>
-            <div className="flex items-center mb-4">
-              <Clock className="h-5 w-5 text-gray-600 mr-2" />
-              <span className="text-gray-700">Your facility is busiest between 10 AM - 4 PM.</span>
-            </div>
-            <div className="space-y-2">
-              {Array.from({ length: 24 }, (_, i) => (
-                <div key={i} className="flex items-center">
-                  <span className="w-12 text-sm">{i}:00</span>
-                  <div className="flex-1 bg-gray-200 rounded-full h-2 ml-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: `${Math.max(20, Math.sin((i - 6) / 24 * 2 * Math.PI) * 50 + 50)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </div>
