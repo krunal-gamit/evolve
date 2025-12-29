@@ -8,7 +8,7 @@ export default function MembersPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header pageTitle="Member Management" />
-        <div className="flex-1 p-6 overflow-auto">
+        <div className="flex-1 overflow-auto">
           <MemberManagement />
         </div>
       </div>

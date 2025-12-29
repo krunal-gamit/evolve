@@ -1,6 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, ColumnDef, flexRender } from '@tanstack/react-table';
+import { format, subDays, subMonths, startOfYear } from 'date-fns';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Member {
   _id: string;
@@ -36,7 +42,9 @@ export default function SubscriptionManagement() {
   const [waitingList, setWaitingList] = useState<Waiting[]>([]);
   const [error, setError] = useState<string>('');
   const [showForm, setShowForm] = useState<boolean>(false);
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
   const [changingSeatId, setChangingSeatId] = useState<string | null>(null);
   const [newSeat, setNewSeat] = useState<string>('');
   const [form, setForm] = useState({
@@ -208,31 +216,402 @@ export default function SubscriptionManagement() {
 
   const vacantSeats = seats.filter(s => s.status === 'vacant');
 
+  // --- Filtering Logic ---
+  const filteredSubscriptions = useMemo(() => {
+    return subscriptions.filter(sub => {
+      const date = new Date(sub.startDate);
+      const start = startDateFilter ? new Date(startDateFilter) : null;
+      const end = endDateFilter ? new Date(endDateFilter) : null;
+      if (start && date < start) return false;
+      if (end) {
+        const adjustedEnd = new Date(end);
+        adjustedEnd.setHours(23, 59, 59, 999);
+        if (date > adjustedEnd) return false;
+      }
+      return true;
+    });
+  }, [subscriptions, startDateFilter, endDateFilter]);
+
+  const activeSubscriptions = useMemo(() => filteredSubscriptions.filter(s => s.status === 'active'), [filteredSubscriptions]);
+  const expiredSubscriptions = useMemo(() => filteredSubscriptions.filter(s => s.status === 'expired'), [filteredSubscriptions]);
+
+  const filteredWaitingList = useMemo(() => {
+    return waitingList.filter(wait => {
+      const date = new Date(wait.requestedDate);
+      const start = startDateFilter ? new Date(startDateFilter) : null;
+      const end = endDateFilter ? new Date(endDateFilter) : null;
+      if (start && date < start) return false;
+      if (end) {
+        const adjustedEnd = new Date(end);
+        adjustedEnd.setHours(23, 59, 59, 999);
+        if (date > adjustedEnd) return false;
+      }
+      return true;
+    });
+  }, [waitingList, startDateFilter, endDateFilter]);
+
+  // --- Columns Definitions ---
+  const activeColumns = useMemo<ColumnDef<Subscription>[]>(() => [
+    {
+      accessorKey: 'member.name',
+      header: 'Member',
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <div className="h-10 w-10 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm shadow-sm">
+            {row.original.member.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{row.original.member.name}</div>
+            <div className="text-xs text-gray-500 font-mono">{row.original.member.memberId}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'seat.seatNumber',
+      header: 'Seat',
+      cell: ({ getValue }) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          Seat {getValue<number>()}
+        </span>
+      )
+    },
+    {
+      id: 'timeline',
+      header: 'Timeline',
+      accessorFn: row => `${row.startDate} ${row.endDate}`,
+      cell: ({ row }) => (
+        <div>
+          <div className="text-sm text-gray-900">{row.original.duration}</div>
+          <div className="text-xs text-gray-500">
+            {new Date(row.original.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(row.original.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
+          </div>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'totalAmount',
+      header: 'Amount',
+      cell: ({ getValue }) => <span className="font-semibold text-gray-900">₹{getValue<number>()}</span>
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => {
+        const sub = row.original;
+        return changingSeatId === sub._id ? (
+          <div className="flex items-center gap-2">
+            <select
+              value={newSeat}
+              onChange={(e) => setNewSeat(e.target.value)}
+              className="block w-24 pl-2 pr-1 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md border"
+            >
+              <option value="">Select</option>
+              {vacantSeats.map(seat => (
+                <option key={seat._id} value={seat.seatNumber}>{seat.seatNumber}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => changeSeat(sub._id, newSeat)}
+              className="p-1 rounded-full text-green-600 hover:bg-green-100 transition-colors"
+              title="Confirm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <button
+              onClick={() => { setChangingSeatId(null); setNewSeat(''); }}
+              className="p-1 rounded-full text-red-600 hover:bg-red-100 transition-colors"
+              title="Cancel"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setChangingSeatId(sub._id)}
+              className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors text-xs uppercase font-semibold tracking-wide"
+            >
+              Change Seat
+            </button>
+            <button onClick={() => endSubscription(sub._id)} className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors text-xs uppercase font-semibold tracking-wide">
+              End
+            </button>
+          </div>
+        );
+      }
+    }
+  ], [vacantSeats, changingSeatId, newSeat]);
+
+  const expiredColumns = useMemo<ColumnDef<Subscription>[]>(() => [
+    {
+      accessorKey: 'member.name',
+      header: 'Member',
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-sm shadow-sm">
+            {row.original.member.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{row.original.member.name}</div>
+            <div className="text-xs text-gray-500 font-mono">{row.original.member.memberId}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'seat.seatNumber',
+      header: 'Seat',
+      cell: ({ getValue }) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          Seat {getValue<number>()}
+        </span>
+      )
+    },
+    {
+      id: 'timeline',
+      header: 'Timeline',
+      accessorFn: row => `${row.startDate} ${row.endDate}`,
+      cell: ({ row }) => (
+        <div>
+          <div className="text-sm text-gray-900">{row.original.duration}</div>
+          <div className="text-xs text-gray-500">
+            {new Date(row.original.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(row.original.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
+          </div>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'totalAmount',
+      header: 'Amount',
+      cell: ({ getValue }) => <span className="font-semibold text-gray-900">₹{getValue<number>()}</span>
+    }
+  ], []);
+
+  const waitingColumns = useMemo<ColumnDef<Waiting>[]>(() => [
+    {
+      accessorKey: 'member.name',
+      header: 'Member',
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <div className="h-10 w-10 flex-shrink-0 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 font-bold text-sm shadow-sm">
+            {row.original.member.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{row.original.member.name}</div>
+            <div className="text-xs text-gray-500 font-mono">{row.original.member.memberId}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'requestedDate',
+      header: 'Requested Date',
+      cell: ({ getValue }) => new Date(getValue<string>()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    },
+    { accessorKey: 'duration', header: 'Duration' },
+    {
+      accessorKey: 'amount',
+      header: 'Amount',
+      cell: ({ getValue }) => <span className="font-semibold text-gray-900">₹{getValue<number>()}</span>
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <button onClick={() => removeFromWaiting(row.original._id)} className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors text-xs uppercase font-semibold tracking-wide">
+          Remove
+        </button>
+      )
+    }
+  ], []);
+
+  // --- Table Instances ---
+  const tableActive = useReactTable({
+    data: activeSubscriptions,
+    columns: activeColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: { globalFilter },
+    onGlobalFilterChange: setGlobalFilter,
+  });
+
+  const tableExpired = useReactTable({
+    data: expiredSubscriptions,
+    columns: expiredColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: { globalFilter },
+    onGlobalFilterChange: setGlobalFilter,
+  });
+
+  const tableWaiting = useReactTable({
+    data: filteredWaitingList,
+    columns: waitingColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: { globalFilter },
+    onGlobalFilterChange: setGlobalFilter,
+  });
+
+  // --- Export Functions ---
+  const exportToExcel = () => {
+    const data = filteredSubscriptions.map(sub => ({
+      'Member ID': sub.member.memberId,
+      Name: sub.member.name,
+      'Seat Number': sub.seat.seatNumber,
+      'Start Date': format(new Date(sub.startDate), 'dd/MM/yyyy'),
+      'End Date': format(new Date(sub.endDate), 'dd/MM/yyyy'),
+      Duration: sub.duration,
+      'Total Amount': sub.totalAmount,
+      Status: sub.status,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Subscriptions');
+    XLSX.writeFile(wb, 'subscriptions.xlsx');
+  };
+
+  const exportToCSV = () => {
+    const data = filteredSubscriptions.map(sub => ({
+      'Member ID': sub.member.memberId,
+      Name: sub.member.name,
+      'Seat Number': sub.seat.seatNumber,
+      'Start Date': format(new Date(sub.startDate), 'dd/MM/yyyy'),
+      'End Date': format(new Date(sub.endDate), 'dd/MM/yyyy'),
+      Duration: sub.duration,
+      'Total Amount': sub.totalAmount,
+      Status: sub.status,
+    }));
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'subscriptions.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF('l', 'mm', 'a4');
+    const headers = [['Member ID', 'Name', 'Seat', 'Start Date', 'End Date', 'Duration', 'Amount', 'Status']];
+    const data = filteredSubscriptions.map(sub => [
+      sub.member.memberId,
+      sub.member.name,
+      sub.seat.seatNumber,
+      format(new Date(sub.startDate), 'dd/MM/yyyy'),
+      format(new Date(sub.endDate), 'dd/MM/yyyy'),
+      sub.duration,
+      sub.totalAmount,
+      sub.status,
+    ]);
+    autoTable(doc, {
+      head: headers,
+      body: data,
+      styles: { fontSize: 8 },
+    });
+    doc.save('subscriptions.pdf');
+  };
+
+  // --- Pagination Component ---
+  const Pagination = ({ table }: { table: any }) => (
+    <div className="flex items-center justify-between mt-4 bg-white px-4 py-3 rounded-lg shadow-sm border border-gray-200 sm:px-6">
+      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm text-gray-700">
+            Showing page <span className="font-medium">{table.getState().pagination.pageIndex + 1}</span> of <span className="font-medium">{table.getPageCount()}</span>
+          </p>
+        </div>
+        <div>
+          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            <button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </nav>
+        </div>
+      </div>
+      <div className="flex items-center justify-between w-full sm:hidden">
+        <button onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">Previous</button>
+        <span className="text-sm text-gray-700">Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</span>
+        <button onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">Next</button>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* Header & Actions */}
       <div className="flex justify-end mb-6">
-          <div className="flex gap-4">
-            <div className="relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 border"
-              />
-            </div>
+          <div>
             <button
               onClick={() => setShowForm(!showForm)}
               className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 ${showForm ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'}`}
             >
               {showForm ? 'Cancel' : 'New Subscription'}
             </button>
+          </div>
+        </div>
+
+        {/* Filters Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-lg">
+              <input
+                type="text"
+                placeholder="Search subscriptions..."
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="w-full pl-4 pr-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block transition-colors"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { label: 'Last 7 Days', days: 7 },
+                { label: 'Last 30 Days', days: 30 },
+                { label: 'Last 3 Months', months: 3 },
+                { label: 'This Year', year: true },
+              ].map((filter, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    if (filter.days) setStartDateFilter(format(subDays(new Date(), filter.days), 'yyyy-MM-dd'));
+                    else if (filter.months) setStartDateFilter(format(subMonths(new Date(), filter.months), 'yyyy-MM-dd'));
+                    else if (filter.year) setStartDateFilter(format(startOfYear(new Date()), 'yyyy-MM-dd'));
+                    setEndDateFilter('');
+                  }}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+                >
+                  {filter.label}
+                </button>
+              ))}
+              <button onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }} className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-full hover:bg-red-100 transition-colors">Clear</button>
+              <div className="h-6 w-px bg-gray-300 mx-2 hidden sm:block"></div>
+              <button onClick={exportToExcel} className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all">Excel</button>
+              <button onClick={exportToCSV} className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">CSV</button>
+              <button onClick={exportToPDF} className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all">PDF</button>
+            </div>
           </div>
         </div>
 
@@ -396,89 +775,37 @@ export default function SubscriptionManagement() {
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
-                  <tr>
-                    {['Member ID', 'Member', 'Seat', 'Start Date', 'End Date', 'Duration', 'Amount', 'Actions'].map(header => (
-                      <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {subscriptions.filter(s => s.status === 'active').filter(sub =>
-                    (sub.member.memberId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    sub.member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    sub.seat.seatNumber.toString().includes(searchTerm)
-                  ).map(sub => (
-                    <tr key={sub._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sub.member.memberId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sub.member.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          Seat {sub.seat.seatNumber}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sub.startDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sub.endDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sub.duration}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{sub.totalAmount}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {changingSeatId === sub._id ? (
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={newSeat}
-                              onChange={(e) => setNewSeat(e.target.value)}
-                              className="block w-24 pl-2 pr-1 py-1 text-sm border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md border"
-                            >
-                              <option value="">Select</option>
-                              {vacantSeats.map(seat => (
-                                <option key={seat._id} value={seat.seatNumber}>{seat.seatNumber}</option>
-                              ))}
-                            </select>
-                            <button
-                              onClick={() => changeSeat(sub._id, newSeat)}
-                              className="p-1 rounded-full text-green-600 hover:bg-green-100 transition-colors"
-                              title="Confirm"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => { setChangingSeatId(null); setNewSeat(''); }}
-                              className="p-1 rounded-full text-red-600 hover:bg-red-100 transition-colors"
-                              title="Cancel"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setChangingSeatId(sub._id)}
-                              className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors text-xs uppercase font-semibold tracking-wide"
-                            >
-                              Change Seat
-                            </button>
-                            <button onClick={() => endSubscription(sub._id)} className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors text-xs uppercase font-semibold tracking-wide">
-                              End
-                            </button>
-                          </div>
-                        )}
-                      </td>
+                  {tableActive.getHeaderGroups().map(headerGroup => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map(header => (
+                        <th key={header.id} className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors" onClick={header.column.getToggleSortingHandler()}>
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {{ asc: ' ↑', desc: ' ↓' }[header.column.getIsSorted() as string] ?? null}
+                        </th>
+                      ))}
                     </tr>
                   ))}
-                  {subscriptions.filter(s => s.status === 'active').length === 0 && (
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tableActive.getRowModel().rows.map(row => (
+                    <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {tableActive.getRowModel().rows.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">No active subscriptions found</td>
+                      <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">No active subscriptions found</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
           </div>
+          <Pagination table={tableActive} />
 
           {/* Expired Subscriptions */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
@@ -488,43 +815,37 @@ export default function SubscriptionManagement() {
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
-                  <tr>
-                    {['Member ID', 'Member', 'Seat', 'Start Date', 'End Date', 'Duration', 'Amount'].map(header => (
-                      <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {subscriptions.filter(s => s.status === 'expired').filter(sub =>
-                    (sub.member.memberId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    sub.member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    sub.seat.seatNumber.toString().includes(searchTerm)
-                  ).map(sub => (
-                    <tr key={sub._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sub.member.memberId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sub.member.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          Seat {sub.seat.seatNumber}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sub.startDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sub.endDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sub.duration}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{sub.totalAmount}</td>
+                  {tableExpired.getHeaderGroups().map(headerGroup => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map(header => (
+                        <th key={header.id} className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors" onClick={header.column.getToggleSortingHandler()}>
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {{ asc: ' ↑', desc: ' ↓' }[header.column.getIsSorted() as string] ?? null}
+                        </th>
+                      ))}
                     </tr>
                   ))}
-                   {subscriptions.filter(s => s.status === 'expired').length === 0 && (
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tableExpired.getRowModel().rows.map(row => (
+                    <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {tableExpired.getRowModel().rows.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No expired subscriptions found</td>
+                      <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">No expired subscriptions found</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
           </div>
+          <Pagination table={tableExpired} />
 
           {/* Waiting List */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
@@ -534,41 +855,37 @@ export default function SubscriptionManagement() {
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
-                  <tr>
-                    {['Member ID', 'Member', 'Requested Date', 'Duration', 'Amount', 'Actions'].map(header => (
-                      <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {waitingList.filter(wait =>
-                    (wait.member.memberId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    wait.member.name.toLowerCase().includes(searchTerm.toLowerCase())
-                  ).map(wait => (
-                    <tr key={wait._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{wait.member.memberId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{wait.member.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(wait.requestedDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{wait.duration}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{wait.amount}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button onClick={() => removeFromWaiting(wait._id)} className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors text-xs uppercase font-semibold tracking-wide">
-                          Remove
-                        </button>
-                      </td>
+                  {tableWaiting.getHeaderGroups().map(headerGroup => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map(header => (
+                        <th key={header.id} className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors" onClick={header.column.getToggleSortingHandler()}>
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {{ asc: ' ↑', desc: ' ↓' }[header.column.getIsSorted() as string] ?? null}
+                        </th>
+                      ))}
                     </tr>
                   ))}
-                   {waitingList.length === 0 && (
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tableWaiting.getRowModel().rows.map(row => (
+                    <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {tableWaiting.getRowModel().rows.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">No members in waiting list</td>
+                      <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">No members in waiting list</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
           </div>
+          <Pagination table={tableWaiting} />
         </div>
 
     </>

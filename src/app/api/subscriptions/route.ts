@@ -39,8 +39,8 @@ export async function GET() {
     console.log('DB connected for subscriptions.');
 
     const subscriptions = await Subscription.find()
-      .populate('member', 'name email memberId')
-      .populate('seat', 'seatNumber')
+      .populate('member', 'name email memberId phone address examPrep createdAt')
+      .populate('seat', 'seatNumber status')
       .populate('payments')
       .sort({ createdAt: -1 });
 

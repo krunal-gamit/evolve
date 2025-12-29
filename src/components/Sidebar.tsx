@@ -18,7 +18,6 @@ export default function Sidebar() {
           <Users size={20} />
           <span>Members</span>
         </Link>
-
         <Link href="/reports" className="flex items-center space-x-2 p-2 rounded hover:bg-gray-700">
           <BarChart3 size={20} />
           <span>Reports</span>
