@@ -98,7 +98,7 @@ export default function SeatsPage() {
           ::-webkit-scrollbar-track { background: transparent; }
           ::-webkit-scrollbar-thumb {
             background-color: rgba(156, 163, 175, 0.5);
-            border-radius: 10px;
+            border-radius: 4px;
             border: 2px solid transparent;
             background-clip: content-box;
           }
