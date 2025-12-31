@@ -192,7 +192,7 @@ export default function Header({ pageTitle }: HeaderProps) {
                     Profile
                   </Link>
                   <button
-                    onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                    onClick={() => signOut({ callbackUrl: '/' })}
                     className="w-full flex items-center px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors"
                   >
                     <LogOut size={16} className="mr-2" />
