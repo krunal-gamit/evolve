@@ -5,17 +5,19 @@ import Notification from '@/models/Notification';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session || !session.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { id } = await params;
+
   try {
     await dbConnect();
     const notification = await Notification.findOneAndUpdate(
-      { _id: params.id, user: session.user.id },
+      { _id: id, user: session.user.id },
       { read: true },
       { new: true }
     );
