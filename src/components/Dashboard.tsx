@@ -76,16 +76,16 @@ export default function Dashboard() {
 
   // Filtered Data based on selection
   const { filteredPayments, filteredExpenses } = useMemo(() => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
+    const currentMonth = new Date().toLocaleDateString('en-CA').slice(0, 7);
     if (filterType === 'thisMonth') {
       return {
-        filteredPayments: payments.filter(p => new Date(p.dateTime).toISOString().slice(0, 7) === currentMonth),
-        filteredExpenses: expenses.filter(e => new Date(e.date).toISOString().slice(0, 7) === currentMonth)
+        filteredPayments: payments.filter(p => new Date(p.dateTime).toLocaleDateString('en-CA').slice(0, 7) === currentMonth),
+        filteredExpenses: expenses.filter(e => new Date(e.date).toLocaleDateString('en-CA').slice(0, 7) === currentMonth)
       };
     } else if (filterType === 'previousMonth' && selectedMonth) {
       return {
-        filteredPayments: payments.filter(p => new Date(p.dateTime).toISOString().slice(0, 7) === selectedMonth),
-        filteredExpenses: expenses.filter(e => new Date(e.date).toISOString().slice(0, 7) === selectedMonth)
+        filteredPayments: payments.filter(p => new Date(p.dateTime).toLocaleDateString('en-CA').slice(0, 7) === selectedMonth),
+        filteredExpenses: expenses.filter(e => new Date(e.date).toLocaleDateString('en-CA').slice(0, 7) === selectedMonth)
       };
     }
     return { filteredPayments: payments, filteredExpenses: expenses };
@@ -97,7 +97,7 @@ export default function Dashboard() {
     const now = new Date();
     for (let i = 1; i <= 6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthStr = d.toISOString().slice(0, 7);
+      const monthStr = d.toLocaleDateString('en-CA').slice(0, 7);
       const label = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
       options.push({ value: monthStr, label });
     }
@@ -207,12 +207,12 @@ export default function Dashboard() {
         `}</style>
         <div className="p-6">
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Overview</h2>
             <p className="text-gray-500 text-sm mt-1">Track your reading room performance.</p>
           </div>
-          <div className="flex items-center bg-white p-1.5 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex flex-col sm:flex-row items-center bg-gradient-to-r from-gray-50 to-gray-100 p-2 rounded-2xl border border-gray-200/60 shadow-sm">
           <button
             onClick={() => setFilterType('total')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterType === 'total' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}
@@ -225,26 +225,31 @@ export default function Dashboard() {
           >
             This Month
           </button>
-          <select
-            value={filterType === 'previousMonth' ? selectedMonth : ""}
-            onChange={(e) => {
-              setFilterType('previousMonth');
-              setSelectedMonth(e.target.value);
-            }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all outline-none cursor-pointer ${
-              filterType === 'previousMonth' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50 bg-transparent'
-            }`}
-          >
-            <option value="" className="hidden">Previous Months</option>
-            {previousMonthsOptions.map(option => (
-              <option key={option.value} value={option.value} className="text-gray-900 bg-white">{option.label}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={filterType === 'previousMonth' ? selectedMonth : ""}
+              onChange={(e) => {
+                setFilterType('previousMonth');
+                setSelectedMonth(e.target.value);
+              }}
+              className={`px-4 py-2 pr-8 rounded-lg text-sm font-medium transition-all outline-none cursor-pointer appearance-none ${
+                filterType === 'previousMonth' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50 bg-transparent'
+              }`}
+            >
+              <option value="" disabled>Previous Months</option>
+              {previousMonthsOptions.map(option => (
+                <option key={option.value} value={option.value} className="text-gray-900 bg-white hover:bg-gray-100">{option.label}</option>
+              ))}
+            </select>
+            <svg className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
           </div>
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
           {/* Revenue Card */}
           <div className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start">
@@ -376,7 +381,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
           {/* Expense Categories Chart */}
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
             <h2 className="text-base font-bold text-gray-900 mb-4">Expense Categories</h2>

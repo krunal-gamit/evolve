@@ -440,7 +440,8 @@ export default function Reports() {
 
       {/* Data Table */}
         <div className="bg-white shadow-sm rounded-2xl overflow-hidden border border-gray-100">
-        <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             {currentTable.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
@@ -465,6 +466,7 @@ export default function Reports() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Pagination */}

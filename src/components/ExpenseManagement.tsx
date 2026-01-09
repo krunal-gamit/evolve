@@ -287,7 +287,8 @@ export default function ExpenseManagement() {
         </div>
 
         <div className="bg-white shadow-sm overflow-hidden rounded-2xl border border-gray-100">
-          <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
@@ -322,6 +323,7 @@ export default function ExpenseManagement() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="flex items-center justify-between mt-6 bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100 sm:px-6">

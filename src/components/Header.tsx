@@ -130,7 +130,7 @@ export default function Header({ pageTitle }: HeaderProps) {
         <div className="flex items-center space-x-4">
           <button onClick={() => setShowModal(true)} className="hidden sm:flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium">
             <UserPlus size={16} className="mr-2" />
-            Add Member
+            <span className="hidden md:inline">Add Member</span>
           </button>
           <div className="relative" ref={notificationRef}>
             <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="p-2 rounded-full hover:bg-gray-100 relative transition-colors">
@@ -220,6 +220,12 @@ export default function Header({ pageTitle }: HeaderProps) {
                 <X size={24} />
               </button>
             </div>
+            <div className="px-4 py-4">
+              <button onClick={() => { setShowModal(true); setSidebarOpen(false); }} className="w-full flex items-center space-x-3 p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 shadow-sm">
+                <UserPlus size={20} />
+                <span className="font-medium">Add Member</span>
+              </button>
+            </div>
             <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
               <Link href="/" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
                 <Home size={20} /> <span className="font-medium">Dashboard</span>
@@ -235,6 +241,9 @@ export default function Header({ pageTitle }: HeaderProps) {
               </Link>
               <Link href="/reports" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
                 <BarChart3 size={20} /> <span className="font-medium">Reports</span>
+              </Link>
+              <Link href="/profile" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
+                <User size={20} /> <span className="font-medium">Profile</span>
               </Link>
               {session?.user.role === 'Admin' && (
                 <Link href="/admin/users" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
