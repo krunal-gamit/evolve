@@ -49,6 +49,7 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
   const [seats, setSeats] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [waitingList, setWaitingList] = useState<Waiting[]>([]);
+  const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [error, setError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'active' | 'expired' | 'waiting'>('active');
   const [globalFilter, setGlobalFilter] = useState('');
@@ -67,6 +68,7 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
     paymentMethod: 'cash',
     upiCode: '',
     dateTime: '',
+    feeType: '',
   });
 
   const fetchMembers = async () => {
@@ -131,11 +133,27 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
     }
   };
 
+  const fetchFeeTypes = async () => {
+    try {
+      const res = await fetch('/api/fees');
+      if (res.ok) {
+        const data = await res.json();
+        setFeeTypes(data);
+      } else {
+        const errorData = await res.json();
+        setError(errorData.error || 'Failed to fetch fee types');
+      }
+    } catch (error) {
+      setError('Network error fetching fee types');
+    }
+  };
+
   useEffect(() => {
     fetchMembers();
     fetchSeats();
     fetchSubscriptions();
     fetchWaitingList();
+    fetchFeeTypes();
   }, []);
 
   useEffect(() => {
@@ -143,6 +161,21 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
       setForm(prev => ({ ...prev, seatNumber: initialSeatNumber }));
     }
   }, [isOpen, initialSeatNumber]);
+
+  const handleFeeTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = e.target.value;
+    const selectedFee = feeTypes.find(f => f._id === selectedId);
+    if (selectedFee) {
+      setForm(prev => ({
+        ...prev,
+        feeType: selectedId,
+        amount: selectedFee.amount.toString(),
+        duration: selectedFee.duration
+      }));
+    } else {
+      setForm(prev => ({ ...prev, feeType: '' }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,6 +211,7 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
         paymentMethod: 'cash',
         upiCode: '',
         dateTime: '',
+        feeType: '',
       });
       onClose();
     } else {
@@ -652,6 +686,21 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
                     <option value="">Select Seat</option>
                     {vacantSeats.map(seat => (
                       <option key={seat._id} value={seat.seatNumber}>{seat.seatNumber}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="sm:col-span-6">
+                  <label htmlFor="fee-type" className="block text-sm font-semibold text-gray-700 mb-1">Fee Type (Optional)</label>
+                  <select
+                    id="fee-type"
+                    value={form.feeType}
+                    onChange={handleFeeTypeChange}
+                    className="block w-full pl-3 pr-10 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-gray-50 focus:bg-white transition-colors"
+                  >
+                    <option value="">Select Fee Type</option>
+                    {feeTypes.map(fee => (
+                      <option key={fee._id} value={fee._id}>{fee.name} - ₹{fee.amount} ({fee.duration})</option>
                     ))}
                   </select>
                 </div>

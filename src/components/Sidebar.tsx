@@ -51,6 +51,10 @@ export default function Sidebar() {
           <IndianRupee size={20} />
           <span className="font-medium">Expenses</span>
         </Link>
+        <Link href="/fees" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
+          <CreditCard size={20} />
+          <span className="font-medium">Fee Types</span>
+        </Link>
         <Link href="/reports" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
           <BarChart3 size={20} />
           <span className="font-medium">Reports</span>

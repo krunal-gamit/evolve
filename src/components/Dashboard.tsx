@@ -381,7 +381,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4 gap-6 mb-8">
           {/* Expense Categories Chart */}
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
             <h2 className="text-base font-bold text-gray-900 mb-4">Expense Categories</h2>
@@ -427,31 +427,6 @@ export default function Dashboard() {
              </div>
           </div>
 
-          {/* Student Exam Focus */}
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
-            <h2 className="text-base font-bold text-gray-900 mb-4">Exam Focus</h2>
-            <div className="space-y-4 overflow-y-auto flex-1 pr-2 min-h-0">
-              {examData.map((exam, index) => (
-                <div key={exam.prep}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">{exam.prep}</span>
-                    <span className="text-sm font-bold text-gray-900">{exam.percentage}%</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2 overflow-hidden">
-                    <div 
-                      className={`h-2.5 rounded-full ${
-                        index % 4 === 0 ? 'bg-blue-500' : 
-                        index % 4 === 1 ? 'bg-purple-500' : 
-                        index % 4 === 2 ? 'bg-pink-500' : 'bg-orange-500'
-                      }`} 
-                      style={{ width: `${exam.percentage}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Recent Transactions */}
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
             <div className="flex items-center justify-between mb-4">
@@ -476,6 +451,31 @@ export default function Dashboard() {
                   <span className={`font-bold text-sm ${tx.amount.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
                     {tx.amount}
                   </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Student Exam Focus */}
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
+            <h2 className="text-base font-bold text-gray-900 mb-4">Exam Focus</h2>
+            <div className="space-y-4 overflow-y-auto flex-1 pr-2 min-h-0">
+              {examData.map((exam, index) => (
+                <div key={exam.prep}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">{exam.prep}</span>
+                    <span className="text-sm font-bold text-gray-900">{exam.percentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2.5 mt-2 overflow-hidden">
+                    <div 
+                      className={`h-2.5 rounded-full ${
+                        index % 4 === 0 ? 'bg-blue-500' : 
+                        index % 4 === 1 ? 'bg-purple-500' : 
+                        index % 4 === 2 ? 'bg-pink-500' : 'bg-orange-500'
+                      }`} 
+                      style={{ width: `${exam.percentage}%` }}
+                    ></div>
+                  </div>
                 </div>
               ))}
             </div>
