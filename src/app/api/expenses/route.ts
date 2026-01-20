@@ -29,21 +29,42 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
-    const { description, amount, category, paidTo, method, date } = await request.json();
+    const body = await request.json();
 
-    const expense = new Expense({ description, amount, category, paidTo, method, date });
+    if (Array.isArray(body)) {
+      // Bulk insert
+      const expenses = body.map(exp => new Expense(exp));
+      const savedExpenses = await Expense.insertMany(expenses);
 
-    await expense.save();
+      for (const expense of savedExpenses) {
+        await Log.create({
+          action: 'CREATE',
+          entity: 'Expense',
+          entityId: expense._id,
+          details: `Bulk created expense: ${expense.description} for ₹${expense.amount}`,
+          performedBy: session.user.email,
+        });
+      }
 
-    await Log.create({
-      action: 'CREATE',
-      entity: 'Expense',
-      entityId: expense._id,
-      details: `Created expense: ${description} for ₹${amount}`,
-      performedBy: session.user.email,
-    });
+      return NextResponse.json(savedExpenses);
+    } else {
+      // Single insert
+      const { description, amount, category, paidTo, method, date } = body;
 
-    return NextResponse.json(expense);
+      const expense = new Expense({ description, amount, category, paidTo, method, date });
+
+      await expense.save();
+
+      await Log.create({
+        action: 'CREATE',
+        entity: 'Expense',
+        entityId: expense._id,
+        details: `Created expense: ${description} for ₹${amount}`,
+        performedBy: session.user.email,
+      });
+
+      return NextResponse.json(expense);
+    }
   } catch (error) {
     console.error('Error in POST /api/expenses:', error);
     const message = error instanceof Error ? error.message : 'Failed to create expense';

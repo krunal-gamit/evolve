@@ -4,6 +4,10 @@ import dbConnect from '@/lib/mongodb';
 
 import Seat from '@/models/Seat';
 
+import Member from '@/models/Member';
+
+import Subscription from '@/models/Subscription';
+
 export async function GET() {
   try {
     await dbConnect();

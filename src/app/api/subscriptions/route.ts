@@ -5,6 +5,8 @@ import dbConnect from '@/lib/mongodb';
 
 import Subscription from '@/models/Subscription';
 
+import Member from '@/models/Member';
+
 import Seat from '@/models/Seat';
 
 import Payment from '@/models/Payment';

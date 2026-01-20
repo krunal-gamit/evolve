@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Notification from '@/models/Notification';
 import Subscription from '@/models/Subscription';
+import Member from '@/models/Member';
 import Payment from '@/models/Payment';
 import Seat from '@/models/Seat';
 import WaitingList from '@/models/WaitingList';

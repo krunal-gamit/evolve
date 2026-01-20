@@ -4,6 +4,8 @@ import dbConnect from '@/lib/mongodb';
 
 import WaitingList from '@/models/WaitingList';
 
+import Member from '@/models/Member';
+
 export async function GET() {
   try {
     await dbConnect();
