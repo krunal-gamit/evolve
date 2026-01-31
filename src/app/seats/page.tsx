@@ -13,8 +13,16 @@ interface Seat {
   _id: string;
   seatNumber: number;
   status: string;
+  location?: { _id: string; name: string; address: string };
   assignedMember?: { name: string };
   subscription?: { endDate: string; status: string };
+}
+
+interface Location {
+  _id: string;
+  name: string;
+  address: string;
+  totalSeats: number;
 }
 
 export default function SeatsPage() {
@@ -22,22 +30,42 @@ export default function SeatsPage() {
   const isMember = session?.user.role === 'Member';
 
   const [seats, setSeats] = useState<Seat[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [waitingCount, setWaitingCount] = useState(0);
   const [totalCapacity, setTotalCapacity] = useState(46);
   const [isSubscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
   const [prefillSeat, setPrefillSeat] = useState('');
+  const [prefillLocation, setPrefillLocation] = useState<string | undefined>(undefined);
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch('/api/locations');
+      if (res.ok) {
+        const data = await res.json();
+        setLocations(data);
+        // Don't auto-select - keep "All" as default
+      }
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+    }
+  };
 
   const fetchSeats = async () => {
     try {
-      let res = await fetch('/api/seats');
+      const url = selectedLocation ? `/api/seats?locationId=${selectedLocation}` : '/api/seats';
+      const res = await fetch(url);
       if (res.ok) {
         let data = await res.json();
         if (data.length === 0) {
-          await fetch('/api/init', { method: 'POST' });
-          res = await fetch('/api/seats');
-          if (res.ok) {
-            data = await res.json();
+          // Initialize seats for this location if none exist
+          if (selectedLocation) {
+            await fetch('/api/init', { method: 'POST' });
+            const newRes = await fetch(url);
+            if (newRes.ok) {
+              data = await newRes.json();
+            }
           }
         }
         setSeats(data);
@@ -69,10 +97,15 @@ export default function SeatsPage() {
   };
 
   useEffect(() => {
-    fetchSeats();
-    fetchWaiting();
-    fetchSettings();
+    fetchLocations();
   }, []);
+
+  useEffect(() => {
+    if (selectedLocation !== undefined) {
+      fetchSeats();
+      fetchWaiting();
+    }
+  }, [selectedLocation]);
 
   const handleDataUpdate = () => {
     fetchSeats();
@@ -85,6 +118,8 @@ export default function SeatsPage() {
   const handleSeatDoubleClick = (seat: Seat) => {
     if (seat.status === 'vacant') {
       setPrefillSeat(seat.seatNumber.toString());
+      setPrefillLocation(seat.location?._id);
+      setSelectedLocation(seat.location?._id || '');
       setSubscriptionModalOpen(true);
     } else {
       setSelectedSeat(seat);
@@ -115,7 +150,21 @@ export default function SeatsPage() {
         `}</style>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           
-          <div className="flex justify-end mb-6">
+          <div className="flex justify-end mb-6 gap-4">
+            {locations.length > 0 && (
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Locations</option>
+                {locations.filter(loc => loc._id).map((loc) => (
+                  <option key={loc._id} value={loc._id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            )}
             {!isMember && <button
               onClick={() => setSubscriptionModalOpen(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-105"
@@ -211,43 +260,102 @@ export default function SeatsPage() {
           {/* Seating Map */}
           <div className="bg-white shadow rounded-lg mb-8 border border-gray-200">
             <div className="px-4 py-4 sm:p-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Live Seating Map</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 gap-3">
-                {seats.map(seat => (
-                  <div 
-                    key={seat.seatNumber} 
-                    onDoubleClick={() => handleSeatDoubleClick(seat)}
-                    className={`relative p-2 border rounded-xl flex flex-col items-center justify-center text-center transition-all duration-200 cursor-pointer select-none ${
-                      seat.status === 'vacant' 
-                        ? 'bg-green-50 border-green-200 hover:shadow-md hover:border-green-300' 
-                        : 'bg-white border-red-200 shadow-sm hover:shadow-md'
-                    }`}
-                  >
-                    <div className={`text-xl font-bold mb-1 ${seat.status === 'vacant' ? 'text-green-600' : 'text-gray-800'}`}>
-                      {seat.seatNumber}
-                    </div>
-                    {seat.status === 'vacant' ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                        Available
-                      </span>
-                    ) : (
-                      <div className="w-full">
-                        <div className="text-sm font-medium text-gray-900 truncate w-full" title={seat.assignedMember?.name}>
-                          {seat.assignedMember?.name || 'Occupied'}
-                        </div>
-                        {seat.subscription && (
-                          <div className="text-xs text-gray-500 mt-1">
-                          Exp: {new Date(seat.subscription.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {seat.status === 'occupied' && (
-                      <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500"></div>
-                    )}
-                  </div>
-                ))}
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">Live Seating Map</h3>
+                {selectedLocation && locations.find(l => l._id === selectedLocation) && (
+                  <span className="text-sm text-gray-500">
+                    {locations.find(l => l._id === selectedLocation)?.name} - {locations.find(l => l._id === selectedLocation)?.address}
+                  </span>
+                )}
               </div>
+              
+              {/* Group seats by location if showing all */}
+              {!selectedLocation ? (
+                // Show all locations grouped
+                locations.filter(loc => loc._id).map(location => {
+                  const locationSeats = seats.filter(s => s.location?._id === location._id);
+                  if (locationSeats.length === 0) return null;
+                  return (
+                    <div key={location._id} className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">{location.name} - {location.address}</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 gap-3">
+                        {locationSeats.map(seat => (
+                          <div 
+                            key={seat.seatNumber} 
+                            onDoubleClick={() => handleSeatDoubleClick(seat)}
+                            className={`relative p-2 border rounded-xl flex flex-col items-center justify-center text-center transition-all duration-200 cursor-pointer select-none ${
+                              seat.status === 'vacant' 
+                                ? 'bg-green-50 border-green-200 hover:shadow-md hover:border-green-300' 
+                                : 'bg-white border-red-200 shadow-sm hover:shadow-md'
+                            }`}
+                          >
+                            <div className={`text-xl font-bold mb-1 ${seat.status === 'vacant' ? 'text-green-600' : 'text-gray-800'}`}>
+                              {seat.seatNumber}
+                            </div>
+                            {seat.status === 'vacant' ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                Available
+                              </span>
+                            ) : (
+                              <div className="w-full">
+                                <div className="text-sm font-medium text-gray-900 truncate w-full" title={seat.assignedMember?.name}>
+                                  {seat.assignedMember?.name || 'Occupied'}
+                                </div>
+                                {seat.subscription && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                  Exp: {new Date(seat.subscription.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {seat.status === 'occupied' && (
+                              <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500"></div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                // Show single location
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 gap-3">
+                  {seats.map(seat => (
+                    <div 
+                      key={seat.seatNumber} 
+                      onDoubleClick={() => handleSeatDoubleClick(seat)}
+                      className={`relative p-2 border rounded-xl flex flex-col items-center justify-center text-center transition-all duration-200 cursor-pointer select-none ${
+                        seat.status === 'vacant' 
+                          ? 'bg-green-50 border-green-200 hover:shadow-md hover:border-green-300' 
+                          : 'bg-white border-red-200 shadow-sm hover:shadow-md'
+                      }`}
+                    >
+                      <div className={`text-xl font-bold mb-1 ${seat.status === 'vacant' ? 'text-green-600' : 'text-gray-800'}`}>
+                        {seat.seatNumber}
+                      </div>
+                      {seat.status === 'vacant' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          Available
+                        </span>
+                      ) : (
+                        <div className="w-full">
+                          <div className="text-sm font-medium text-gray-900 truncate w-full" title={seat.assignedMember?.name}>
+                            {seat.assignedMember?.name || 'Occupied'}
+                          </div>
+                          {seat.subscription && (
+                            <div className="text-xs text-gray-500 mt-1">
+                            Exp: {new Date(seat.subscription.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {seat.status === 'occupied' && (
+                        <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500"></div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -258,9 +366,14 @@ export default function SeatsPage() {
               onClose={() => {
                 setSubscriptionModalOpen(false);
                 setPrefillSeat('');
+                setPrefillLocation(undefined);
               }}
               onUpdate={handleDataUpdate}
               initialSeatNumber={prefillSeat}
+              initialLocationId={prefillLocation}
+              initialMemberId={undefined}
+              selectedLocation={selectedLocation}
+              onLocationChange={setSelectedLocation}
             />
           </div>
 

@@ -11,6 +11,7 @@ import Footer from './Footer';
 import ConfirmationModal from './ConfirmationModal';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
+import SubscriptionManagement from './SubscriptionManagement';
 
 interface Member {
   _id: string;
@@ -37,6 +38,8 @@ export default function MemberManagement() {
   const [endDateFilter, setEndDateFilter] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionMemberId, setSubscriptionMemberId] = useState<string | null>(null);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -92,6 +95,15 @@ export default function MemberManagement() {
   const handleDeleteRequest = (id: string) => {
     setDeleteId(id);
     setShowConfirmation(true);
+  };
+
+  const handleSubscribe = (memberId: string) => {
+    setSubscriptionMemberId(memberId);
+    setShowSubscriptionModal(true);
+  };
+
+  const handleSubscriptionUpdate = () => {
+    fetchMembers();
   };
 
   const handleDeleteConfirm = async () => {
@@ -239,6 +251,11 @@ export default function MemberManagement() {
       enableSorting: false,
       cell: ({ row }) => isMember ? null : (
         <div className="flex items-center">
+            <button onClick={() => handleSubscribe(row.original._id)} className="text-green-600 hover:text-green-900 mr-4 transition-colors" title="Subscribe">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
             <button onClick={() => handleEdit(row.original)} className="text-blue-600 hover:text-blue-900 mr-4 transition-colors" title="Edit">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -522,6 +539,12 @@ export default function MemberManagement() {
           </div>
         </div>
       )}
+      <SubscriptionManagement
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        onUpdate={handleSubscriptionUpdate}
+        initialMemberId={subscriptionMemberId || undefined}
+      />
       <Footer />
     </div>
   );

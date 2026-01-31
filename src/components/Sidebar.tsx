@@ -76,6 +76,10 @@ export default function Sidebar() {
         )}
         {session?.user.role === 'Admin' && (
           <>
+            <Link href="/admin/locations" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
+              <MapPin size={20} />
+              <span className="font-medium">Locations</span>
+            </Link>
             <Link href="/admin/users" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
               <UserCheck size={20} />
               <span className="font-medium">Manager Management</span>
