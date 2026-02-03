@@ -22,6 +22,8 @@ export default function Dashboard() {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [filterType, setFilterType] = useState<'total' | 'thisMonth' | 'previousMonth'>('total');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
 
@@ -40,14 +42,16 @@ export default function Dashboard() {
           fetch('/api/members'),
           fetch('/api/seats'),
           fetch('/api/subscriptions'),
+          fetch('/api/locations'),
         ];
         if (!isMember) {
           promises.push(fetch('/api/expenses'));
         }
-        const [membersRes, seatsRes, subsRes, expensesRes] = await Promise.all(promises);
+        const [membersRes, seatsRes, subsRes, locationsRes, expensesRes] = await Promise.all(promises);
         const m = await membersRes.json();
         const s = await seatsRes.json();
         const subs = await subsRes.json();
+        const locs = await locationsRes.json();
         let exp = [];
         if (!isMember && expensesRes) {
           if (expensesRes.ok) {
@@ -57,6 +61,7 @@ export default function Dashboard() {
         setMembers(m);
         setSeats(s);
         setSubscriptions(subs);
+        setLocations(locs || []);
         setExpenses(exp);
         // Extract and sort payments
         const allPayments = subs.flatMap((sub: any) =>
@@ -83,6 +88,16 @@ export default function Dashboard() {
   const occupiedSeats = seats.filter(seat => seat.status === 'occupied').length;
   const occupancyRate = totalSeats > 0 ? ((occupiedSeats / totalSeats) * 100).toFixed(1) : '0.0';
   const activeMembers = members.length; // Assuming all are active
+
+  // Filter seats by selected location
+  const filteredSeats = useMemo(() => {
+    if (!selectedLocation) return seats;
+    return seats.filter((seat: any) => seat.location?._id === selectedLocation || seat.location === selectedLocation);
+  }, [seats, selectedLocation]);
+
+  const filteredTotalSeats = filteredSeats.length;
+  const filteredOccupiedSeats = filteredSeats.filter((seat: any) => seat.status === 'occupied').length;
+  const filteredOccupancyRate = filteredTotalSeats > 0 ? ((filteredOccupiedSeats / filteredTotalSeats) * 100).toFixed(1) : '0.0';
 
   // Filtered Data based on selection
   const { filteredPayments, filteredExpenses } = useMemo(() => {
@@ -223,28 +238,69 @@ export default function Dashboard() {
               <p className="text-gray-500 text-sm mt-1">View current seat availability.</p>
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900 mb-6">Occupancy Heatmap</h2>
-              <div className="grid grid-cols-8 sm:grid-cols-10 gap-2">
-                {seats.map(seat => (
-                  <div
-                    key={seat._id}
-                    className={`aspect-square rounded-md transition-all duration-300 hover:scale-110 cursor-pointer ${
-                      seat.status === 'occupied' 
-                        ? 'bg-red-500 shadow-sm shadow-red-200' 
-                        : 'bg-emerald-400 shadow-sm shadow-emerald-200'
-                    }`}
-                    title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
-                  ></div>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">Occupancy Heatmap</h2>
+                {locations.length > 1 && (
+                  <select
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Locations</option>
+                    {locations.map((loc: any) => (
+                      <option key={loc._id} value={loc._id}>{loc.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
-              <div className="flex items-center mt-6 space-x-6">
+              {!selectedLocation ? (
+                // Show all locations grouped
+                locations.filter(loc => loc._id).map(location => {
+                  const locationSeats = filteredSeats.filter((s: any) => s.location?._id === location._id || s.location === location._id);
+                  if (locationSeats.length === 0) return null;
+                  return (
+                    <div key={location._id} className="mb-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">{location.name}</h4>
+                      <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5">
+                        {locationSeats.map((seat: any) => (
+                          <div
+                            key={seat._id}
+                            className={`aspect-square rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                              seat.status === 'occupied' 
+                                ? 'bg-red-500 shadow-sm shadow-red-200' 
+                                : 'bg-emerald-400 shadow-sm shadow-emerald-200'
+                            }`}
+                            title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
+                          ></div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                // Show single location
+                <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5">
+                  {filteredSeats.map((seat: any) => (
+                    <div
+                      key={seat._id}
+                      className={`aspect-square rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                        seat.status === 'occupied' 
+                          ? 'bg-red-500 shadow-sm shadow-red-200' 
+                          : 'bg-emerald-400 shadow-sm shadow-emerald-200'
+                      }`}
+                      title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
+                    ></div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center mt-4 space-x-6">
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-emerald-400 rounded-full mr-2"></div>
-                  <span className="text-sm text-gray-600 font-medium">Vacant</span>
+                  <span className="text-sm text-gray-600 font-medium">Vacant ({filteredTotalSeats - filteredOccupiedSeats})</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                  <span className="text-sm text-gray-600 font-medium">Occupied</span>
+                  <span className="text-sm text-gray-600 font-medium">Occupied ({filteredOccupiedSeats}/{filteredTotalSeats})</span>
                 </div>
               </div>
             </div>
@@ -399,28 +455,69 @@ export default function Dashboard() {
 
           {/* Occupancy Heatmap */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h2 className="text-lg font-bold text-gray-900 mb-6">Occupancy Heatmap</h2>
-            <div className="grid grid-cols-8 sm:grid-cols-10 gap-2">
-              {seats.map(seat => (
-                <div
-                  key={seat._id}
-                  className={`aspect-square rounded-md transition-all duration-300 hover:scale-110 cursor-pointer ${
-                    seat.status === 'occupied' 
-                      ? 'bg-red-500 shadow-sm shadow-red-200' 
-                      : 'bg-emerald-400 shadow-sm shadow-emerald-200'
-                  }`}
-                  title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
-                ></div>
-              ))}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Occupancy Heatmap</h2>
+              {locations.length > 1 && (
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Locations</option>
+                  {locations.map((loc: any) => (
+                    <option key={loc._id} value={loc._id}>{loc.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
-            <div className="flex items-center mt-6 space-x-6">
+            {!selectedLocation ? (
+              // Show all locations grouped
+              locations.filter(loc => loc._id).map(location => {
+                const locationSeats = filteredSeats.filter((s: any) => s.location?._id === location._id || s.location === location._id);
+                if (locationSeats.length === 0) return null;
+                return (
+                  <div key={location._id} className="mb-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">{location.name}</h4>
+                    <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5">
+                      {locationSeats.map((seat: any) => (
+                        <div
+                          key={seat._id}
+                          className={`aspect-square rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                            seat.status === 'occupied' 
+                              ? 'bg-red-500 shadow-sm shadow-red-200' 
+                              : 'bg-emerald-400 shadow-sm shadow-emerald-200'
+                          }`}
+                          title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
+                        ></div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              // Show single location
+              <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5">
+                {filteredSeats.map((seat: any) => (
+                  <div
+                    key={seat._id}
+                    className={`aspect-square rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                      seat.status === 'occupied' 
+                        ? 'bg-red-500 shadow-sm shadow-red-200' 
+                        : 'bg-emerald-400 shadow-sm shadow-emerald-200'
+                    }`}
+                    title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
+                  ></div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center mt-4 space-x-6">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-emerald-400 rounded-full mr-2"></div>
-                <span className="text-sm text-gray-600 font-medium">Vacant</span>
+                <span className="text-sm text-gray-600 font-medium">Vacant ({filteredTotalSeats - filteredOccupiedSeats})</span>
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                <span className="text-sm text-gray-600 font-medium">Occupied</span>
+                <span className="text-sm text-gray-600 font-medium">Occupied ({filteredOccupiedSeats}/{filteredTotalSeats})</span>
               </div>
             </div>
           </div>

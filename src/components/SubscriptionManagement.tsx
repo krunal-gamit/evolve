@@ -128,7 +128,8 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
       if (res.ok) {
         const data = await res.json();
         setLocations(data);
-        if (data.length > 0) {
+        // Only auto-select first location if no location is currently selected
+        if (data.length > 0 && !selectedLocation) {
           setSelectedLocation(data[0]._id);
           setForm(prev => ({ ...prev, locationId: data[0]._id }));
         }

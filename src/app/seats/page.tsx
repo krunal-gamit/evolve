@@ -45,7 +45,8 @@ export default function SeatsPage() {
       if (res.ok) {
         const data = await res.json();
         setLocations(data);
-        // Don't auto-select - keep "All" as default
+        // Ensure "All" is selected by default
+        setSelectedLocation('');
       }
     } catch (error) {
       console.error('Error fetching locations:', error);
@@ -281,7 +282,7 @@ export default function SeatsPage() {
                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                         {locationSeats.map(seat => (
                           <div 
-                            key={seat.seatNumber} 
+                            key={seat._id} 
                             onDoubleClick={() => handleSeatDoubleClick(seat)}
                             className={`relative p-2 border rounded-xl flex flex-col items-center justify-center text-center transition-all duration-200 cursor-pointer select-none ${
                               seat.status === 'vacant' 
@@ -322,7 +323,7 @@ export default function SeatsPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                   {seats.map(seat => (
                     <div 
-                      key={seat.seatNumber} 
+                      key={seat._id} 
                       onDoubleClick={() => handleSeatDoubleClick(seat)}
                       className={`relative p-2 border rounded-xl flex flex-col items-center justify-center text-center transition-all duration-200 cursor-pointer select-none ${
                         seat.status === 'vacant' 

@@ -53,6 +53,22 @@ export default function FixDatabasePage() {
     setLoading(null);
   };
 
+  const resetSeatStatuses = async () => {
+    if (!confirm('Are you sure you want to reset ALL seat statuses to vacant? This will make all seats available.')) {
+      return;
+    }
+    setLoading('reset-seat-statuses');
+    setResult('');
+    try {
+      const res = await fetch('/api/fix-seats-status', { method: 'POST' });
+      const data = await res.json();
+      setResult(prev => prev + '\n--- Reset Seat Statuses ---\n' + JSON.stringify(data, null, 2));
+    } catch (error: any) {
+      setResult(prev => prev + '\n--- Reset Error ---\n' + error.message);
+    }
+    setLoading(null);
+  };
+
   if (!session || session.user.role !== 'Admin') {
     return (
       <div className="flex h-screen bg-gray-50">
@@ -113,9 +129,16 @@ export default function FixDatabasePage() {
               <button
                 onClick={deleteSubscriptions}
                 disabled={loading !== null}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 mr-4"
               >
                 {loading === 'delete-subscriptions' ? 'Deleting...' : 'Delete All Subscriptions & Waiting List'}
+              </button>
+              <button
+                onClick={resetSeatStatuses}
+                disabled={loading !== null}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+              >
+                {loading === 'reset-seat-statuses' ? 'Resetting...' : 'Reset All Seat Statuses'}
               </button>
             </div>
 
