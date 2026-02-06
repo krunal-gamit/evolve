@@ -39,23 +39,47 @@ export async function POST(request: NextRequest) {
 
     const { name, email, phone, address, examPrep } = await request.json();
 
+    // Validate required fields
+    if (!name || !email || !phone || !address) {
+      return NextResponse.json({ error: 'Name, email, phone, and address are required' }, { status: 400 });
+    }
+
+    // Check if member with this email already exists
+    const existingMember = await Member.findOne({ email });
+    if (existingMember) {
+      return NextResponse.json({ error: 'Member with this email already exists' }, { status: 400 });
+    }
+
+    // Check if user with this email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return NextResponse.json({ error: 'User account with this email already exists' }, { status: 400 });
+    }
+
     // Generate memberId: EVOLVE[4digit year][2digit month][001]
+    // Sequence resets each month
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
-    const lastMember = await Member.findOne().sort({ memberId: -1 });
+    const monthPrefix = `EVOLVE${year}${month}`;
+    
+    // Find last member from current month only
+    const lastMemberOfMonth = await Member.findOne({
+      memberId: { $regex: `^${monthPrefix}` }
+    }).sort({ memberId: -1 });
+    
     let nextNumber = 1;
-    if (lastMember && lastMember.memberId) {
-      const lastNum = parseInt(lastMember.memberId.slice(-3));
+    if (lastMemberOfMonth && lastMemberOfMonth.memberId) {
+      const lastNum = parseInt(lastMemberOfMonth.memberId.slice(-3));
       nextNumber = lastNum + 1;
     }
-    const memberId = `EVOLVE${year}${month}${nextNumber.toString().padStart(3, '0')}`;
+    const memberId = `${monthPrefix}${nextNumber.toString().padStart(3, '0')}`;
 
     const member = new Member({ memberId, name, email, phone, address, examPrep });
 
     await member.save();
 
-    // Create user account for member
+    // Create user account for member with default password
     const defaultPassword = 'password123'; // TODO: Send email to set password
     const hashedPassword = await bcrypt.hash(defaultPassword, 10);
     const qrCodeData = `Member ID: ${memberId}\nName: ${name}\nEmail: ${email}`;

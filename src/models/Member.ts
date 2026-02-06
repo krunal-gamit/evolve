@@ -7,7 +7,7 @@ const MemberSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   address: { type: String, required: true },
   examPrep: { type: String },
-  password: { type: String, required: true },
+  password: { type: String }, // Password is stored in User model for auth
   createdAt: { type: Date, default: Date.now },
 });
 
