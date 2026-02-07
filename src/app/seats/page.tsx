@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Sidebar from '../../components/Sidebar';
 import SubscriptionManagement from '../../components/SubscriptionManagement';
@@ -26,8 +27,17 @@ interface Location {
 }
 
 export default function SeatsPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const isMember = session?.user.role === 'Member';
+
+  // Redirect members to dashboard
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (session && isMember) {
+      router.push('/');
+    }
+  }, [session, status, router, isMember]);
 
   const [seats, setSeats] = useState<Seat[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -38,6 +48,18 @@ export default function SeatsPage() {
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
   const [prefillSeat, setPrefillSeat] = useState('');
   const [prefillLocation, setPrefillLocation] = useState<string | undefined>(undefined);
+
+  // Show loading or redirecting
+  if (status === 'loading' || (session && isMember)) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
 
   const fetchLocations = async () => {
     try {

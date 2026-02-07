@@ -482,7 +482,7 @@ export default function Dashboard() {
                       {locationSeats.map((seat: any) => (
                         <div
                           key={seat._id}
-                          className={`aspect-square rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                          className={`w-[25px] h-[25px] rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
                             seat.status === 'occupied' 
                               ? 'bg-red-500 shadow-sm shadow-red-200' 
                               : 'bg-emerald-400 shadow-sm shadow-emerald-200'
@@ -500,7 +500,7 @@ export default function Dashboard() {
                 {filteredSeats.map((seat: any) => (
                   <div
                     key={seat._id}
-                    className={`aspect-square rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                    className={`w-[25px] h-[25px] rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
                       seat.status === 'occupied' 
                         ? 'bg-red-500 shadow-sm shadow-red-200' 
                         : 'bg-emerald-400 shadow-sm shadow-emerald-200'

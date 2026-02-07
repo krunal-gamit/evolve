@@ -26,6 +26,9 @@ export default function Sidebar() {
       console.error('Error fetching settings:', error);
     }
   };
+
+  const isMember = session?.user.role === 'Member';
+
   return (
     <div className="hidden md:flex flex-col w-64 bg-gray-900 text-white h-full border-r border-gray-800 shadow-xl">
       <div className="p-6 flex items-center space-x-3 border-b border-gray-800">
@@ -39,23 +42,20 @@ export default function Sidebar() {
           <Home size={20} />
           <span className="font-medium">Dashboard</span>
         </Link>
-        <Link href="/seats" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-          <MapPin size={20} />
-          <span className="font-medium">{session?.user.role === 'Member' ? 'Seats Map' : 'Seats & Subscriptions'}</span>
-        </Link>
-        {session?.user.role === 'Member' ? (
+
+        {isMember ? (
           <>
             <Link href="/profile" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
               <User size={20} />
               <span className="font-medium">Profile</span>
             </Link>
-            <Link href="/reports" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <BarChart3 size={20} />
-              <span className="font-medium">My Reports</span>
-            </Link>
           </>
         ) : (
           <>
+            <Link href="/seats" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
+              <MapPin size={20} />
+              <span className="font-medium">Seats & Subscriptions</span>
+            </Link>
             <Link href="/members" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
               <Users size={20} />
               <span className="font-medium">Members</span>
@@ -74,6 +74,7 @@ export default function Sidebar() {
             </Link>
           </>
         )}
+
         {session?.user.role === 'Admin' && (
           <>
             <Link href="/admin/locations" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
