@@ -1,8 +1,17 @@
+import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import MemberManagement from '@/components/MemberManagement';
 
-export default function MembersPage() {
+export default async function MembersPage() {
+  const session = await getServerSession();
+
+  // Redirect members to dashboard
+  if (session?.user?.role === 'Member') {
+    redirect('/');
+  }
+
   return (
     <div className="flex h-screen">
       <Sidebar />

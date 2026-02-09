@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const SubscriptionSchema = new mongoose.Schema({
   member: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
+  location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true },
   seat: { type: mongoose.Schema.Types.ObjectId, ref: 'Seat', required: true },
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
@@ -9,6 +10,8 @@ const SubscriptionSchema = new mongoose.Schema({
   totalAmount: { type: Number, required: true },
   payments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Payment' }],
   status: { type: String, enum: ['active', 'expired'], default: 'active' },
+}, {
+  timestamps: true,
 });
 
 export default mongoose.models.Subscription || mongoose.model('Subscription', SubscriptionSchema);

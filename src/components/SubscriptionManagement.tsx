@@ -20,6 +20,7 @@ interface Member {
 interface Subscription {
   _id: string;
   member: { name: string; email: string; memberId: string };
+  location?: { _id: string; name: string; address: string };
   seat: { seatNumber: number };
   startDate: string;
   endDate: string;
@@ -27,6 +28,13 @@ interface Subscription {
   totalAmount: number;
   status: string;
   payments: any[];
+}
+
+interface Location {
+  _id: string;
+  name: string;
+  address: string;
+  totalSeats: number;
 }
 
 interface Waiting {
@@ -43,9 +51,13 @@ interface SubscriptionManagementProps {
   onClose?: () => void;
   onUpdate?: () => void;
   initialSeatNumber?: string;
+  initialLocationId?: string;
+  initialMemberId?: string;
+  selectedLocation?: string;
+  onLocationChange?: (locationId: string) => void;
 }
 
-export default function SubscriptionManagement({ isOpen = false, onClose = () => {}, onUpdate, initialSeatNumber }: SubscriptionManagementProps) {
+export default function SubscriptionManagement({ isOpen = false, onClose = () => {}, onUpdate, initialSeatNumber, initialLocationId, initialMemberId, selectedLocation: propLocation, onLocationChange }: SubscriptionManagementProps) {
   const { data: session } = useSession();
   const isMember = session?.user.role === 'Member';
 
@@ -54,6 +66,10 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [waitingList, setWaitingList] = useState<Waiting[]>([]);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const internalSelectedLocation = useState<string>('');
+  const selectedLocation = propLocation !== undefined ? propLocation : internalSelectedLocation[0];
+  const setSelectedLocation = onLocationChange || internalSelectedLocation[1];
   const [error, setError] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'active' | 'expired' | 'waiting'>(isMember ? 'waiting' : 'active');
   const [globalFilter, setGlobalFilter] = useState('');
@@ -65,6 +81,7 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
   const [endSubscriptionId, setEndSubscriptionId] = useState<string | null>(null);
   const [form, setForm] = useState({
     memberId: '',
+    locationId: '',
     seatNumber: '',
     startDate: '',
     duration: '',
@@ -74,6 +91,21 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
     dateTime: '',
     feeType: '',
   });
+
+  // Effect to set initial values when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      if (initialLocationId) {
+        setForm(prev => ({ ...prev, locationId: initialLocationId }));
+      }
+      if (initialMemberId) {
+        setForm(prev => ({ ...prev, memberId: initialMemberId }));
+      }
+      if (initialSeatNumber) {
+        setForm(prev => ({ ...prev, seatNumber: initialSeatNumber }));
+      }
+    }
+  }, [isOpen, initialLocationId, initialMemberId, initialSeatNumber]);
 
   const fetchMembers = async () => {
     try {
@@ -90,9 +122,31 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
     }
   };
 
-  const fetchSeats = async () => {
+  const fetchLocations = async () => {
     try {
-      const res = await fetch('/api/seats');
+      const res = await fetch('/api/locations');
+      if (res.ok) {
+        const data = await res.json();
+        setLocations(data);
+        // Only auto-select first location if no location is currently selected
+        if (data.length > 0 && !selectedLocation) {
+          setSelectedLocation(data[0]._id);
+          setForm(prev => ({ ...prev, locationId: data[0]._id }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+    }
+  };
+
+  const fetchSeats = async () => {
+    if (!selectedLocation) {
+      setSeats([]);
+      return;
+    }
+    try {
+      const url = `/api/seats?locationId=${selectedLocation}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setSeats(data);
@@ -107,7 +161,8 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
 
   const fetchSubscriptions = async () => {
     try {
-      const res = await fetch('/api/subscriptions');
+      const url = selectedLocation ? `/api/subscriptions?locationId=${selectedLocation}` : '/api/subscriptions';
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         data.sort((a: Subscription, b: Subscription) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
@@ -154,17 +209,21 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
 
   useEffect(() => {
     fetchMembers();
-    fetchSeats();
-    fetchSubscriptions();
-    fetchWaitingList();
+    fetchLocations();
     fetchFeeTypes();
   }, []);
 
   useEffect(() => {
-    if (isOpen && initialSeatNumber) {
-      setForm(prev => ({ ...prev, seatNumber: initialSeatNumber }));
+    fetchSeats();
+    fetchSubscriptions();
+    fetchWaitingList();
+  }, [selectedLocation]);
+
+  useEffect(() => {
+    if (selectedLocation) {
+      setForm(prev => ({ ...prev, locationId: selectedLocation }));
     }
-  }, [isOpen, initialSeatNumber]);
+  }, [selectedLocation]);
 
   const handleFeeTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedId = e.target.value;
@@ -208,6 +267,7 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
       toast.success(result.message || 'Subscription created');
       setForm({
         memberId: '',
+        locationId: selectedLocation,
         seatNumber: '',
         startDate: '',
         duration: '',
@@ -220,6 +280,55 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
       onClose();
     } else {
       setError(result.error || 'Failed to create subscription');
+    }
+    fetchSubscriptions();
+    fetchSeats();
+    fetchWaitingList();
+    if (onUpdate) onUpdate();
+  };
+
+  const handleAddToWaiting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation - only member and location are required for waiting list
+    if (!form.memberId) {
+      setError('Please select a member');
+      return;
+    }
+    
+    setError('');
+    const res = await fetch('/api/waiting', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        memberId: form.memberId,
+        locationId: form.locationId || selectedLocation,
+        startDate: form.startDate,
+        duration: form.duration,
+        amount: parseFloat(form.amount),
+        paymentMethod: form.paymentMethod,
+        upiCode: form.upiCode,
+        dateTime: form.dateTime,
+      }),
+    });
+    const result = await res.json();
+    if (res.ok) {
+      toast.success(result.message || 'Added to waiting list');
+      setForm({
+        memberId: '',
+        locationId: selectedLocation,
+        seatNumber: '',
+        startDate: '',
+        duration: '',
+        amount: '',
+        paymentMethod: 'cash',
+        upiCode: '',
+        dateTime: '',
+        feeType: '',
+      });
+      onClose();
+    } else {
+      setError(result.error || 'Failed to add to waiting list');
     }
     fetchSubscriptions();
     fetchSeats();
@@ -336,6 +445,11 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
       )
     },
     {
+      accessorKey: 'location.name',
+      header: 'Location',
+      cell: ({ getValue }) => <span className="text-sm text-gray-600">{getValue<string>() || '-'}</span>
+    },
+    {
       accessorKey: 'seat.seatNumber',
       header: 'Seat',
       cell: ({ getValue }) => (
@@ -431,6 +545,11 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
           </div>
         </div>
       )
+    },
+    {
+      accessorKey: 'location.name',
+      header: 'Location',
+      cell: ({ getValue }) => <span className="text-sm text-gray-600">{getValue<string>() || '-'}</span>
     },
     {
       accessorKey: 'seat.seatNumber',
@@ -663,6 +782,25 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-y-4 gap-x-6 sm:grid-cols-6">
                 
                 <div className="sm:col-span-3">
+                  <label htmlFor="location-select" className="block text-sm font-semibold text-gray-700 mb-1">Location</label>
+                  <select
+                    id="location-select"
+                    value={form.locationId}
+                    onChange={(e) => {
+                      setForm({ ...form, locationId: e.target.value, seatNumber: '' });
+                      setSelectedLocation(e.target.value);
+                    }}
+                    required
+                    className="block w-full pl-3 pr-10 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-gray-50 focus:bg-white transition-colors"
+                  >
+                    <option value="">Select Location</option>
+                    {locations.map(location => (
+                      <option key={location._id} value={location._id}>{location.name} - {location.address}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="sm:col-span-3">
                   <label htmlFor="member-select" className="block text-sm font-semibold text-gray-700 mb-1">Member</label>
                   <select
                     id="member-select"
@@ -797,6 +935,13 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
                 <div className="sm:col-span-6 flex justify-end pt-4 gap-3">
                   <button
                     type="button"
+                    onClick={handleAddToWaiting}
+                    className="px-4 py-2 border border-yellow-300 rounded-lg text-yellow-700 hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors text-sm font-medium"
+                  >
+                    Add to Waiting List
+                  </button>
+                  <button
+                    type="button"
                     onClick={onClose}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors text-sm font-medium"
                   >
@@ -913,7 +1058,7 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
                   ))}
                   {tableActive.getRowModel().rows.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-4 py-2 text-center text-sm text-gray-500">No active subscriptions found</td>
+                      <td colSpan={6} className="px-4 py-2 text-center text-sm text-gray-500">No active subscriptions found</td>
                     </tr>
                   )}
                 </tbody>
@@ -955,7 +1100,7 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
                   ))}
                   {tableExpired.getRowModel().rows.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-2 text-center text-sm text-gray-500">No expired subscriptions found</td>
+                      <td colSpan={5} className="px-4 py-2 text-center text-sm text-gray-500">No expired subscriptions found</td>
                     </tr>
                   )}
                 </tbody>
