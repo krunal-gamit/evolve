@@ -25,10 +25,15 @@ interface Member {
 
 export default function MemberManagement() {
   const { data: session } = useSession();
-  const isMember = session?.user.role === 'Member';
+  const [mounted, setMounted] = useState(false);
+  const isMember = mounted && session?.user.role === 'Member';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [members, setMembers] = useState<Member[]>([]);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', examPrep: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', examPrep: '', password: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -37,6 +42,7 @@ export default function MemberManagement() {
   const [endDateFilter, setEndDateFilter] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -76,7 +82,7 @@ export default function MemberManagement() {
   }, [members, startDateFilter, endDateFilter]);
 
   const handleEdit = (member: Member) => {
-    setForm({ name: member.name, email: member.email, phone: member.phone, address: member.address, examPrep: member.examPrep || '' });
+    setForm({ name: member.name, email: member.email, phone: member.phone, address: member.address, examPrep: member.examPrep || '', password: '' });
     setEditingId(member._id);
     setErrors({});
     setShowModal(true);
@@ -84,7 +90,7 @@ export default function MemberManagement() {
 
   const handleAdd = () => {
     if (isMember) return;
-    setForm({ name: '', email: '', phone: '', address: '', examPrep: '' });
+    setForm({ name: '', email: '', phone: '', address: '', examPrep: '', password: '' });
     setEditingId(null);
     setShowModal(true);
   };
@@ -131,7 +137,7 @@ export default function MemberManagement() {
   };
 
   const handleCancel = () => {
-    setForm({ name: '', email: '', phone: '', address: '', examPrep: '' });
+    setForm({ name: '', email: '', phone: '', address: '', examPrep: '', password: '' });
     setEditingId(null);
     setErrors({});
     setShowModal(false);
@@ -147,7 +153,7 @@ export default function MemberManagement() {
       body: JSON.stringify(form),
     });
     if (res.ok) {
-      setForm({ name: '', email: '', phone: '', address: '', examPrep: '' });
+      setForm({ name: '', email: '', phone: '', address: '', examPrep: '', password: '' });
       setEditingId(null);
       setShowModal(false);
       toast.success(`Member ${editingId ? 'updated' : 'added'} successfully!`);
@@ -167,7 +173,7 @@ export default function MemberManagement() {
       Phone: member.phone,
       Address: member.address,
       'Exam Prep': member.examPrep,
-      'Join Date': new Date(member.createdAt).toLocaleDateString('en-GB')
+      'Join Date': member.createdAt ? new Date(member.createdAt).toISOString().split('T')[0] : ''
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -184,7 +190,7 @@ export default function MemberManagement() {
       Phone: member.phone,
       Address: member.address,
       'Exam Prep': member.examPrep,
-      'Join Date': new Date(member.createdAt).toLocaleDateString('en-GB')
+      'Join Date': member.createdAt ? new Date(member.createdAt).toISOString().split('T')[0] : ''
     }));
     const csv = Papa.unparse(data);
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -208,6 +214,131 @@ export default function MemberManagement() {
       head: headers, body: data, styles: { fontSize: 8 }
     });
     doc.save('members.pdf');
+  };
+
+  const handleUpload = async () => {
+    if (!uploadFile) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = new Uint8Array(e.target?.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Assume first row is headers
+      const headers = jsonData[0] as string[];
+      const rows = jsonData.slice(1) as any[][];
+
+      const parseDate = (dateValue: any): Date | null => {
+        if (!dateValue) return null;
+        if (dateValue instanceof Date) {
+          return isNaN(dateValue.getTime()) ? null : dateValue;
+        }
+        if (typeof dateValue === 'number') {
+          // Excel serial date number
+          return new Date((dateValue - 25569) * 86400 * 1000);
+        }
+        // Handle string dates (ISO format YYYY-MM-DD or other formats)
+        const parsed = new Date(dateValue);
+        if (!isNaN(parsed.getTime())) {
+          return parsed;
+        }
+        // Try parsing DD/MM/YYYY format
+        const parts = String(dateValue).split('/');
+        if (parts.length === 3) {
+          const [day, month, year] = parts;
+          const date = new Date(`${year}-${month}-${day}`);
+          if (!isNaN(date.getTime())) return date;
+        }
+        return null;
+      };
+
+      const parsedMembers = rows.map(row => {
+        const obj: any = {};
+        headers.forEach((header, index) => {
+          obj[header] = row[index];
+        });
+        const parsedDate = parseDate(obj['Join Date']);
+        return {
+          memberId: obj['Member ID'] || null,
+          name: obj['Name'],
+          email: obj['Email'],
+          phone: obj['Phone'],
+          address: obj['Address'],
+          examPrep: obj['Exam Prep'] || '',
+          joinDate: parsedDate,
+        };
+      });
+
+      // Validate
+      const validMembers = parsedMembers.filter(m => 
+        m.name && m.email && m.phone && m.address
+      );
+
+      if (validMembers.length === 0) {
+        toast.error('No valid members found in the file.');
+        return;
+      }
+
+      // Check for duplicates
+      const newMembers = validMembers.filter(newM => {
+        const isDuplicate = members.some(existing => 
+          existing.email?.toLowerCase() === newM.email?.toLowerCase()
+        );
+        return !isDuplicate;
+      });
+
+      if (newMembers.length === 0) {
+        toast.error('All members in the file already exist. No new members to upload.');
+        return;
+      }
+
+      if (newMembers.length < validMembers.length) {
+        const skipped = validMembers.length - newMembers.length;
+        toast(`${skipped} duplicate member(s) skipped. Uploading ${newMembers.length} new member(s).`);
+      }
+
+      try {
+        // Upload each member one by one
+        let uploaded = 0;
+        for (const member of newMembers) {
+          const submitData: any = { 
+            name: member.name, 
+            email: member.email, 
+            phone: member.phone, 
+            address: member.address, 
+            examPrep: member.examPrep 
+          };
+          
+          // Add memberId if provided
+          if (member.memberId) {
+            submitData.memberId = member.memberId;
+          }
+          
+          // Add joinDate if provided
+          if (member.joinDate) {
+            submitData.joinDate = member.joinDate.toISOString().split('T')[0];
+          }
+            
+          const res = await fetch('/api/members', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitData),
+          });
+          if (res.ok) {
+            uploaded++;
+          }
+        }
+        
+        toast.success(`Uploaded ${uploaded} members successfully.`);
+        setUploadFile(null);
+        fetchMembers();
+      } catch (error) {
+        toast.error('Error uploading members.');
+      }
+    };
+    reader.readAsArrayBuffer(uploadFile);
   };
 
   const columns = useMemo<ColumnDef<Member>[]>(() => [
@@ -299,15 +430,35 @@ export default function MemberManagement() {
           </div>
           <div className="mt-4 flex md:mt-0 md:ml-4 gap-4">
             {!isMember && (
-              <button
-                onClick={handleAdd}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-              >
-                <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-                Add Member
-              </button>
+              <>
+                <div className="flex items-center">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 max-w-xs"
+                  />
+                </div>
+                <button
+                  onClick={handleUpload}
+                  disabled={!uploadFile}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Upload
+                </button>
+                <button
+                  onClick={handleAdd}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                  </svg>
+                  Add Member
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -502,6 +653,22 @@ export default function MemberManagement() {
                   placeholder="Exam preparation details"
                 />
               </div>
+              {editingId && (
+                <div className="sm:col-span-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    New Password 
+                    <span className="text-xs font-normal text-gray-500">(leave blank to keep current)</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={form.password}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors bg-gray-50 focus:bg-white sm:text-sm"
+                    placeholder="Enter new password"
+                  />
+                </div>
+              )}
               <div className="sm:col-span-6 flex justify-end pt-4 gap-3">
                 <button
                   type="button"
