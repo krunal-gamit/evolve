@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Toaster, toast } from 'react-hot-toast';
-import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck } from 'lucide-react';
+import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck, CreditCard, Settings, ClipboardList, Calendar } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 
 interface HeaderProps {
@@ -117,47 +117,47 @@ export default function Header({ pageTitle }: HeaderProps) {
   return (
     <>
       <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
-      {/* Top Header */}
-      <header className="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-30">
+      {/* Top Header - iOS Style with Glassmorphism */}
+      <header className="glass sticky top-0 z-30 h-14 flex items-center justify-between px-4">
         <div className="flex items-center">
           <button
-            className="md:hidden mr-4 p-2 rounded-md hover:bg-gray-100"
+            className="lg:hidden mr-3 p-1.5 rounded-lg hover:bg-black/5"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
-            <Menu size={20} />
+            <Menu size={18} />
           </button>
-          <h1 className="text-xl font-semibold text-gray-800">{pageTitle}</h1>
+          <h1 className="text-base font-semibold text-gray-800">{pageTitle}</h1>
         </div>
-        <div className="flex items-center space-x-4">
-          {!isMember && <button onClick={() => setShowModal(true)} className="hidden sm:flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md text-sm font-medium">
-            <UserPlus size={16} className="mr-2" />
-            <span className="hidden md:inline">Add Member</span>
+        <div className="flex items-center gap-2">
+          {!isMember && <button onClick={() => setShowModal(true)} className="hidden sm:flex items-center px-3 py-1.5 bg-[#007AFF] text-white rounded-lg hover:bg-[#0066CC] transition-all duration-200 text-sm font-medium">
+            <UserPlus size={14} className="mr-1.5" />
+            <span className="hidden md:inline">Add</span>
           </button>}
           <div className="relative" ref={notificationRef}>
-            <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="p-2 rounded-full hover:bg-gray-100 relative transition-colors">
-              <Bell size={20} className="text-gray-600" />
+            <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="p-1.5 rounded-full hover:bg-gray-100 relative transition-colors">
+              <Bell size={18} className="text-gray-600" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white animate-pulse">
+                <span className="absolute top-0.5 right-0.5 bg-[#FF3B30] text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white">
                   {unreadCount}
                 </span>
               )}
             </button>
             {notificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-fade-in-down">
-                <div className="p-4 font-bold border-b border-gray-100">Notifications</div>
-                <div className="max-h-96 overflow-y-auto">
+              <div className="absolute right-2 mt-2 w-72 glass-card shadow-xl overflow-hidden z-50 animate-ios-fade-in">
+                <div className="px-4 py-3 font-semibold border-b border-gray-100 text-sm">Notifications</div>
+                <div className="max-80 overflow-y-auto">
                   {notifications.map((n: any) => (
-                    <div key={n._id} className={`p-4 border-b border-gray-50 text-sm hover:bg-gray-50 ${!n.read ? 'bg-blue-50/50' : ''}`}>
-                      <p className="text-gray-800">{n.message}</p>
-                      <div className="flex justify-between items-center mt-2">
+                    <div key={n._id} className={`px-4 py-3 border-b border-gray-50 text-sm hover:bg-gray-50 ${!n.read ? 'bg-blue-50/50' : ''}`}>
+                      <p className="text-gray-800 text-sm">{n.message}</p>
+                      <div className="flex justify-between items-center mt-1.5">
                         <span className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</span>
-                        {!n.read && <button onClick={() => handleReadNotification(n._id)} className="text-xs text-blue-600 font-semibold hover:underline">Mark as read</button>}
+                        {!n.read && <button onClick={() => handleReadNotification(n._id)} className="text-xs text-[#007AFF] font-medium">Mark read</button>}
                       </div>
                     </div>
                   ))}
-                  {notifications.length === 0 && <p className="p-4 text-center text-gray-500">No new notifications.</p>}
+                  {notifications.length === 0 && <p className="p-4 text-center text-gray-500 text-sm">No new notifications.</p>}
                 </div>
-                <div className="p-2 bg-gray-50 text-center"><Link href="/admin/notifications" className="text-sm font-medium text-blue-600 hover:underline">View all notifications</Link></div>
+                <div className="p-2 bg-gray-50 text-center"><Link href="/admin/notifications" className="text-xs font-medium text-[#007AFF] hover:underline">View all</Link></div>
               </div>
             )}
           </div>
@@ -166,37 +166,36 @@ export default function Header({ pageTitle }: HeaderProps) {
           <div className="relative" ref={userMenuRef}>
             <button 
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center space-x-3 p-1 rounded-full hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
+              className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#007AFF] to-[#5856D6] flex items-center justify-center text-xs font-semibold text-white">
                 {session?.user.name?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div className="hidden sm:flex flex-col items-start leading-tight">
                 <span className="font-semibold text-sm text-gray-800">{session?.user.name}</span>
-                <span className="text-xs text-gray-500">{session?.user.email}</span>
               </div>
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-fade-in-down origin-top-right">
-                <div className="p-4 border-b border-gray-50">
-                  <p className="text-sm font-bold text-gray-900 truncate">{session?.user.name || 'User'}</p>
+              <div className="absolute right-2 mt-2 w-52 glass-card shadow-xl overflow-hidden z-50 animate-ios-fade-in origin-top-right">
+                <div className="px-4 py-3 border-b border-gray-50">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{session?.user.name || 'User'}</p>
                   <p className="text-xs text-gray-500 truncate">{session?.user.email || ''}</p>
                 </div>
-                <div className="p-2">
+                <div className="p-1.5">
                   <Link 
                     href="/profile" 
                     className="flex items-center px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                     onClick={() => setUserMenuOpen(false)}
                   >
-                    <User size={16} className="mr-2 text-gray-500" />
+                    <User size={15} className="mr-2 text-gray-500" />
                     Profile
                   </Link>
                   <button
                     onClick={() => signOut({ callbackUrl: '/' })}
-                    className="w-full flex items-center px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                    className="w-full flex items-center px-3 py-2 text-sm text-[#FF3B30] rounded-lg hover:bg-red-50 transition-colors"
                   >
-                    <LogOut size={16} className="mr-2" />
+                    <LogOut size={15} className="mr-2" />
                     Logout
                   </button>
                 </div>
@@ -206,50 +205,58 @@ export default function Header({ pageTitle }: HeaderProps) {
         </div>
       </header>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar Overlay - iOS Style */}
       {sidebarOpen && (
-        <div className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setSidebarOpen(false)}>
-          <div className="w-72 bg-gray-900 text-white h-full fixed left-0 top-0 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-6 flex items-center justify-between border-b border-gray-800">
+        <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setSidebarOpen(false)}>
+          <div className="w-72 bg-[#1C1C1E] text-white h-full fixed left-0 top-0 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 flex items-center justify-between border-b border-gray-800">
               <div className="flex items-center space-x-3">
-                <div className="bg-blue-600 p-2 rounded-lg">
-                  <BookOpen size={24} className="text-white" />
+                <div className="bg-[#007AFF] p-1.5 rounded-lg">
+                  <BookOpen size={20} className="text-white" />
                 </div>
-                <span className="text-xl font-bold tracking-wide">Evolve</span>
+                <span className="text-lg font-semibold tracking-wide">Evolve</span>
               </div>
-              <button onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-white">
-                <X size={24} />
+              <button onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-white p-1">
+                <X size={20} />
               </button>
             </div>
-            <div className="px-4 py-4">
-              {!isMember && <button onClick={() => { setShowModal(true); setSidebarOpen(false); }} className="w-full flex items-center space-x-3 p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 shadow-sm">
-                <UserPlus size={20} />
-                <span className="font-medium">Add Member</span>
+            <div className="px-3 py-3">
+              {!isMember && <button onClick={() => { setShowModal(true); setSidebarOpen(false); }} className="w-full flex items-center space-x-2 p-2.5 rounded-xl bg-[#007AFF] text-white hover:bg-[#0066CC] transition-all duration-200 text-sm font-medium">
+                <UserPlus size={18} />
+                <span>Add Member</span>
               </button>}
             </div>
-            <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-              <Link href="/" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
-                <Home size={20} /> <span className="font-medium">Dashboard</span>
+            <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+              <Link href="/" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                <Home size={18} /> <span>Dashboard</span>
               </Link>
-              <Link href="/seats" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
-                <MapPin size={20} /> <span className="font-medium">Seats & Subscriptions</span>
+              <Link href="/members" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                <Users size={18} /> <span>Members</span>
               </Link>
-              <Link href="/members" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
-                <Users size={20} /> <span className="font-medium">Members</span>
+              <Link href="/seats" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                <Calendar size={18} /> <span>Subscriptions</span>
               </Link>
-              <Link href="/expenses" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
-                <IndianRupee size={20} /> <span className="font-medium">Expenses</span>
+              <Link href="/expenses" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                <IndianRupee size={18} /> <span>Expenses</span>
               </Link>
-              <Link href="/reports" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
-                <BarChart3 size={20} /> <span className="font-medium">Reports</span>
+              <Link href="/reports" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                <BarChart3 size={18} /> <span>Reports</span>
               </Link>
-              <Link href="/profile" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
-                <User size={20} /> <span className="font-medium">Profile</span>
+              <Link href="/fees" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                <CreditCard size={18} /> <span>Fee Types</span>
+              </Link>
+              <Link href="/profile" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                <User size={18} /> <span>Profile</span>
               </Link>
               {session?.user.role === 'Admin' && (
-                <Link href="/admin/users" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200" onClick={() => setSidebarOpen(false)}>
-                  <UserCheck size={20} /> <span className="font-medium">Manager Management</span>
-                </Link>
+                <>
+                  <Link href="/admin/settings" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                    <Settings size={18} /> <span>Settings</span>
+                  </Link>
+                  <Link href="/admin/logs" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                    <ClipboardList size={18} /> <span>Logs</span>
+                  </Link>
+                </>
               )}
             </nav>
           </div>
@@ -257,84 +264,84 @@ export default function Header({ pageTitle }: HeaderProps) {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 border border-gray-100 overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h3 className="text-xl font-bold text-gray-900">Add Member</h3>
-              <button onClick={handleCancel} className="text-gray-400 hover:text-gray-500 transition-colors">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-card max-w-lg w-full shadow-2xl">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100 bg-gray-50/80">
+              <h3 className="text-lg font-semibold text-gray-900">Add Member</h3>
+              <button onClick={handleCancel} className="text-gray-400 hover:text-gray-500 transition-colors p-1">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="px-6 py-6">
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-y-4 gap-x-6 sm:grid-cols-6">
+            <div className="px-5 py-5">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-6">
                 <div className="sm:col-span-3">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
                   <input
                     type="text"
                     name="name"
                     value={form.name}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${errors.name ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                    className={`ios-input w-full text-sm ${errors.name ? 'border-red-300' : ''}`}
                     placeholder="Full name"
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                   <input
                     type="email"
                     name="email"
                     value={form.email}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${errors.email ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                    className={`ios-input w-full text-sm ${errors.email ? 'border-red-300' : ''}`}
                     placeholder="Email address"
                   />
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Phone</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
                   <input
                     type="text"
                     name="phone"
                     value={form.phone}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${errors.phone ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                    className={`ios-input w-full text-sm ${errors.phone ? 'border-red-300' : ''}`}
                     placeholder="10-digit number"
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Address</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
                   <input
                     type="text"
                     name="address"
                     value={form.address}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${errors.address ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                    className={`ios-input w-full text-sm ${errors.address ? 'border-red-300' : ''}`}
                     placeholder="Address"
                   />
                 </div>
 
               <div className="sm:col-span-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Exam Prep</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Exam Prep</label>
                 <input
                   type="text"
                   name="examPrep"
                   value={form.examPrep}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors bg-gray-50 focus:bg-white sm:text-sm"
+                  className="ios-input w-full text-sm"
                   placeholder="Exam preparation details"
                 />
               </div>
-              <div className="sm:col-span-6 flex justify-end pt-4 gap-3">
+              <div className="sm:col-span-6 flex justify-end pt-3 gap-2">
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors text-sm font-medium"
+                  className="ios-btn ios-btn-secondary text-sm"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-105">
+                <button type="submit" className="ios-btn ios-btn-primary text-sm px-4">
                   Add Member
                 </button>
               </div>

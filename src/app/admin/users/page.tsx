@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import Footer from '@/components/Footer';
 import UserManagement from '@/components/UserManagement';
 
 export default function UsersPage() {
@@ -30,11 +31,12 @@ export default function UsersPage() {
   return (
     <div className="flex h-screen">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header pageTitle="Manager Management" />
-        <div className="flex-1 overflow-auto">
-          <UserManagement />
-        </div>
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7]">
+            <UserManagement />
+        </main>
+        <Footer />
       </div>
     </div>
   );

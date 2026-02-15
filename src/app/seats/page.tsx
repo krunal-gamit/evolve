@@ -145,7 +145,7 @@ export default function SeatsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header pageTitle="Facility Dashboard" />
@@ -166,10 +166,10 @@ export default function SeatsPage() {
             scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
           }
         `}</style>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7] p-4">
           {showLoading ? null : (
             <>
-            <div className="flex justify-end mb-6 gap-4">
+            <div className="flex justify-end mb-6 gap-4 mt-4">
             {locations.length > 0 && (
               <select
                 value={selectedLocation}
@@ -396,8 +396,8 @@ export default function SeatsPage() {
           </div>
           </>
           )}
-          <Footer />
         </main>
+        <Footer />
       </div>
     </div>
   );

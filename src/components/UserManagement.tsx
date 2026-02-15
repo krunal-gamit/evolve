@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, ColumnDef, flexRender } from '@tanstack/react-table';
-import Footer from './Footer';
 import ConfirmationModal from './ConfirmationModal';
 import { Toaster, toast } from 'react-hot-toast';
 import { Trash2, Search, Plus, User as UserIcon, Shield } from 'lucide-react';
@@ -163,22 +162,12 @@ export default function UserManagement() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-8 font-sans flex flex-col">
+    <>
       <ConfirmationModal isOpen={showConfirmation} onClose={() => setShowConfirmation(false)} onConfirm={handleDeleteConfirm} title="Delete User" message="Are you sure you want to delete this user? This action cannot be undone." />
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="md:flex md:items-center md:justify-between mb-8">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-              Manager Management
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Add, view, and delete manager accounts.
-            </p>
-          </div>
-        </div>
+      <div className="px-4 pb-4 mt-4">
 
         {/* Filters Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+        <div className="my-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="relative flex-1 max-w-lg">
               <input
@@ -396,7 +385,6 @@ export default function UserManagement() {
         </div>
       )}
 
-      <Footer />
-    </div>
+    </>
   );
 }

@@ -8,7 +8,6 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import Footer from './Footer';
 import { Toaster } from 'react-hot-toast';
 
 interface Subscription {
@@ -543,7 +542,6 @@ export default function Reports() {
         </div>
       </div>
       </div>
-      <Footer />
     </div>
   );
 }

@@ -60,11 +60,11 @@ export default function Dashboard() {
         }
         setMembers(m);
         setSeats(s);
-        setSubscriptions(subs);
+        setSubscriptions(Array.isArray(subs) ? subs : []);
         setLocations(locs || []);
         setExpenses(exp);
         // Extract and sort payments
-        const allPayments = subs.flatMap((sub: any) =>
+        const allPayments = (Array.isArray(subs) ? subs : []).flatMap((sub: any) =>
           (sub.payments || []).map((p: any) => ({ ...p, memberName: sub.member?.name || 'Unknown Member' }))
         ).sort((a: any, b: any) => +new Date(b.dateTime) - +new Date(a.dateTime));
         setPayments(allPayments);
@@ -182,7 +182,7 @@ export default function Dashboard() {
   const allTxns = [...paymentTxns, ...expenseTxns].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 50);
   const transactions = allTxns.map(t => ({
     name: t.name,
-    date: t.date.toLocaleDateString(),
+    date: t.date.toLocaleDateString('en-GB'),
     amount: t.amount,
     detail: t.detail
   }));
@@ -212,7 +212,7 @@ export default function Dashboard() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header pageTitle="Dashboard" />
-        <main className="flex-1 overflow-y-auto bg-gray-50/50">
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7]">
         <style jsx global>{`
           /* For Webkit-based browsers (Chrome, Safari) */
           ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -230,21 +230,21 @@ export default function Dashboard() {
             scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
           }
         `}</style>
-        <div className="p-6">
+        <div className="p-4 sm:p-5">
         {isMember ? (
           <>
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-800">Seat Map</h2>
-              <p className="text-gray-500 text-sm mt-1">View current seat availability.</p>
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-800">Seat Map</h2>
+              <p className="text-gray-500 text-xs mt-0.5">View current seat availability.</p>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div className="ios-card-glass p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Occupancy Heatmap</h2>
+                <h2 className="text-base font-semibold text-gray-900">Occupancy</h2>
                 {locations.length > 1 && (
                   <select
                     value={selectedLocation}
                     onChange={(e) => setSelectedLocation(e.target.value)}
-                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="ios-select text-xs"
                   >
                     <option value="">All Locations</option>
                     {locations.map((loc: any) => (
@@ -260,15 +260,15 @@ export default function Dashboard() {
                   if (locationSeats.length === 0) return null;
                   return (
                     <div key={location._id} className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">{location.name}</h4>
-                      <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5">
+                      <h4 className="text-xs font-medium text-gray-600 mb-2">{location.name}</h4>
+                      <div className="grid grid-cols-[repeat(10,minmax(0,1fr))] gap-1">
                         {locationSeats.map((seat: any) => (
                           <div
                             key={seat._id}
-                            className={`aspect-square rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                            className={`aspect-square rounded-sm transition-all duration-200 ${
                               seat.status === 'occupied' 
-                                ? 'bg-red-500 shadow-sm shadow-red-200' 
-                                : 'bg-emerald-400 shadow-sm shadow-emerald-200'
+                                ? 'bg-[#FF3B30]' 
+                                : 'bg-[#34C759]'
                             }`}
                             title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
                           ></div>
@@ -279,50 +279,50 @@ export default function Dashboard() {
                 })
               ) : (
                 // Show single location
-                <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5">
+                <div className="grid grid-cols-[repeat(10,minmax(0,1fr))] gap-1">
                   {filteredSeats.map((seat: any) => (
                     <div
                       key={seat._id}
-                      className={`aspect-square rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                      className={`aspect-square rounded-sm transition-all duration-200 ${
                         seat.status === 'occupied' 
-                          ? 'bg-red-500 shadow-sm shadow-red-200' 
-                          : 'bg-emerald-400 shadow-sm shadow-emerald-200'
+                          ? 'bg-[#FF3B30]' 
+                          : 'bg-[#34C759]'
                       }`}
                       title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
                     ></div>
                   ))}
                 </div>
               )}
-              <div className="flex items-center mt-4 space-x-6">
+              <div className="flex items-center mt-4 gap-4">
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-emerald-400 rounded-full mr-2"></div>
-                  <span className="text-sm text-gray-600 font-medium">Vacant ({filteredTotalSeats - filteredOccupiedSeats})</span>
+                  <div className="w-2.5 h-2.5 bg-[#34C759] rounded-full mr-1.5"></div>
+                  <span className="text-xs text-gray-600">Vacant ({filteredTotalSeats - filteredOccupiedSeats})</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                  <span className="text-sm text-gray-600 font-medium">Occupied ({filteredOccupiedSeats}/{filteredTotalSeats})</span>
+                  <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full mr-1.5"></div>
+                  <span className="text-xs text-gray-600">Occupied ({filteredOccupiedSeats}/{filteredTotalSeats})</span>
                 </div>
               </div>
             </div>
           </>
         ) : (
           <>
-            {/* Header Section */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
+            {/* Header Section - iOS Style */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">Overview</h2>
-                <p className="text-gray-500 text-sm mt-1">Track your reading room performance.</p>
+                <h2 className="text-lg font-semibold text-gray-800">Overview</h2>
+                <p className="text-gray-500 text-xs mt-0.5">Track your reading room.</p>
               </div>
-              <div className="flex flex-col sm:flex-row items-center bg-gradient-to-r from-gray-50 to-gray-100 p-2 rounded-2xl border border-gray-200/60 shadow-sm">
+              <div className="flex items-center glass rounded-xl p-1">
               <button
                 onClick={() => setFilterType('total')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterType === 'total' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'total' ? 'bg-[#007AFF] text-white' : 'text-gray-600 hover:bg-white/50'}`}
               >
                 Total
               </button>
               <button
                 onClick={() => setFilterType('thisMonth')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filterType === 'thisMonth' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'thisMonth' ? 'bg-[#007AFF] text-white' : 'text-gray-600 hover:bg-white/50'}`}
               >
                 This Month
               </button>
@@ -333,98 +333,86 @@ export default function Dashboard() {
                     setFilterType('previousMonth');
                     setSelectedMonth(e.target.value);
                   }}
-                  className={`px-4 py-2 pr-8 rounded-lg text-sm font-medium transition-all outline-none cursor-pointer appearance-none ${
-                    filterType === 'previousMonth' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50 bg-transparent'
-                  }`}
+                  style={{ 
+                    color: filterType === 'previousMonth' && selectedMonth ? '#1f2937' : '#4b5563'
+                  }}
+                  className="px-3 py-1.5 pr-6 rounded-lg text-xs font-medium transition-all outline-none cursor-pointer appearance-none bg-transparent"
                 >
-                  <option value="" disabled>Previous Months</option>
+                  <option value="" disabled style={{ color: '#6b7280' }}>Previous</option>
                   {previousMonthsOptions.map(option => (
-                    <option key={option.value} value={option.value} className="text-gray-900 bg-white hover:bg-gray-100">{option.label}</option>
+                    <option key={option.value} value={option.value} style={{ color: '#1f2937', backgroundColor: '#ffffff' }}>{option.label}</option>
                   ))}
                 </select>
-                <svg className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 pointer-events-none text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
               </div>
             </div>
 
-            {/* Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+            {/* Cards - iOS Style with Glassmorphism */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {/* Revenue Card */}
-          <div className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 transition-transform hover:-translate-y-1">
+          <div className="ios-card-glass p-4 transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-gray-500">Revenue</p>
-                <h3 className="text-2xl font-bold text-gray-900 mt-2">₹{displayRevenue.toLocaleString()}</h3>
+                <p className="text-xs font-medium text-gray-500">Revenue</p>
+                <h3 className="text-lg font-bold text-gray-900 mt-1">₹{displayRevenue.toLocaleString()}</h3>
               </div>
-              <div className="p-3 bg-emerald-50 rounded-xl">
-                <IndianRupee className="h-6 w-6 text-emerald-600" />
+              <div className="p-2 bg-emerald-100/70 rounded-lg">
+                <IndianRupee className="h-4 w-4 text-emerald-600" />
               </div>
             </div>
           </div>
 
           {/* Occupancy Card */}
-          <div className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 transition-transform hover:-translate-y-1">
+          <div className="ios-card-glass p-4 transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-gray-500">Occupancy</p>
-                <h3 className="text-2xl font-bold text-gray-900 mt-2">{occupancyRate}%</h3>
-                <p className="text-xs text-gray-500 mt-1">{occupiedSeats}/{totalSeats} Seats</p>
+                <p className="text-xs font-medium text-gray-500">Occupancy</p>
+                <h3 className="text-lg font-bold text-gray-900 mt-1">{occupancyRate}%</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{occupiedSeats}/{totalSeats}</p>
               </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <Activity className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Active Members Card */}
-          <div className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 transition-transform hover:-translate-y-1">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Active Members</p>
-                <h3 className="text-2xl font-bold text-gray-900 mt-2">{activeMembers}</h3>
-              </div>
-              <div className="p-3 bg-violet-50 rounded-xl">
-                <Users className="h-6 w-6 text-violet-600" />
+              <div className="p-2 bg-blue-100/70 rounded-lg">
+                <Activity className="h-4 w-4 text-blue-600" />
               </div>
             </div>
           </div>
 
           {/* Expenses Card */}
-          <div className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 transition-transform hover:-translate-y-1">
+          <div className="ios-card-glass p-4 transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-gray-500">Expenses</p>
-                <h3 className="text-2xl font-bold text-gray-900 mt-2">₹{displayExpenses.toLocaleString()}</h3>
+                <p className="text-xs font-medium text-gray-500">Expenses</p>
+                <h3 className="text-lg font-bold text-gray-900 mt-1">₹{displayExpenses.toLocaleString()}</h3>
               </div>
-              <div className="p-3 bg-rose-50 rounded-xl">
-                <CreditCard className="h-6 w-6 text-rose-600" />
+              <div className="p-2 bg-rose-100/70 rounded-lg">
+                <CreditCard className="h-4 w-4 text-rose-600" />
               </div>
             </div>
           </div>
 
           {/* Profit Card */}
-          <div className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 transition-transform hover:-translate-y-1">
+          <div className="ios-card-glass p-4 transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-gray-500">Profit</p>
-                <h3 className="text-2xl font-bold text-gray-900 mt-2">₹{displayProfit.toLocaleString()}</h3>
+                <p className="text-xs font-medium text-gray-500">Profit</p>
+                <h3 className="text-lg font-bold text-gray-900 mt-1">₹{displayProfit.toLocaleString()}</h3>
               </div>
-              <div className="p-3 bg-amber-50 rounded-xl">
-                <Wallet className="h-6 w-6 text-amber-600" />
+              <div className="p-2 bg-amber-100/70 rounded-lg">
+                <Wallet className="h-4 w-4 text-amber-600" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Revenue & Expenses Chart */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+          {/* Revenue & Expenses Chart - Glassmorphism */}
+          <div className="ios-card-glass p-4 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Financial Overview</h2>
-              <p className="text-sm text-gray-500">Revenue vs Expenses (Last 6 Months)</p>
+              <h2 className="text-sm font-semibold text-gray-900">Financial Overview</h2>
+              <p className="text-xs text-gray-500">Last 6 Months</p>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={300}>
@@ -453,15 +441,15 @@ export default function Dashboard() {
           </ResponsiveContainer>
           </div>
 
-          {/* Occupancy Heatmap */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Occupancy Heatmap</h2>
+          {/* Occupancy Heatmap - iOS Style Glassmorphism */}
+          <div className="ios-card-glass p-4 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-900">Occupancy</h2>
               {locations.length > 1 && (
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="ios-select text-xs py-1"
                 >
                   <option value="">All Locations</option>
                   {locations.map((loc: any) => (
@@ -476,16 +464,16 @@ export default function Dashboard() {
                 const locationSeats = filteredSeats.filter((s: any) => s.location?._id === location._id || s.location === location._id);
                 if (locationSeats.length === 0) return null;
                 return (
-                  <div key={location._id} className="mb-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">{location.name}</h4>
-                    <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5">
+                  <div key={location._id} className="mb-3">
+                    <h4 className="text-xs font-medium text-gray-600 mb-1.5">{location.name}</h4>
+                    <div className="grid grid-cols-[repeat(24,minmax(0,1fr))] gap-px">
                       {locationSeats.map((seat: any) => (
                         <div
                           key={seat._id}
-                          className={`w-[25px] h-[25px] rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                          className={`aspect-square rounded-sm ${
                             seat.status === 'occupied' 
-                              ? 'bg-red-500 shadow-sm shadow-red-200' 
-                              : 'bg-emerald-400 shadow-sm shadow-emerald-200'
+                              ? 'bg-[#FF3B30]' 
+                              : 'bg-[#34C759]'
                           }`}
                           title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
                         ></div>
@@ -496,46 +484,46 @@ export default function Dashboard() {
               })
             ) : (
               // Show single location
-              <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5">
+              <div className="grid grid-cols-[repeat(24,minmax(0,1fr))] gap-px">
                 {filteredSeats.map((seat: any) => (
                   <div
                     key={seat._id}
-                    className={`w-[25px] h-[25px] rounded transition-all duration-300 hover:scale-110 cursor-pointer ${
+                    className={`aspect-square rounded-sm ${
                       seat.status === 'occupied' 
-                        ? 'bg-red-500 shadow-sm shadow-red-200' 
-                        : 'bg-emerald-400 shadow-sm shadow-emerald-200'
+                        ? 'bg-[#FF3B30]' 
+                        : 'bg-[#34C759]'
                     }`}
                     title={seat.status === 'occupied' ? 'Occupied' : 'Vacant'}
                   ></div>
                 ))}
               </div>
             )}
-            <div className="flex items-center mt-4 space-x-6">
+            <div className="flex items-center mt-3 gap-3">
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-emerald-400 rounded-full mr-2"></div>
-                <span className="text-sm text-gray-600 font-medium">Vacant ({filteredTotalSeats - filteredOccupiedSeats})</span>
+                <div className="w-2 h-2 bg-[#34C759] rounded-full mr-1"></div>
+                <span className="text-xs text-gray-500">Vacant ({filteredTotalSeats - filteredOccupiedSeats})</span>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                <span className="text-sm text-gray-600 font-medium">Occupied ({filteredOccupiedSeats}/{filteredTotalSeats})</span>
+                <div className="w-2 h-2 bg-[#FF3B30] rounded-full mr-1"></div>
+                <span className="text-xs text-gray-500">Occupied ({filteredOccupiedSeats}/{filteredTotalSeats})</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4 gap-6 mb-8">
-          {/* Expense Categories Chart */}
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
-            <h2 className="text-base font-bold text-gray-900 mb-4">Expense Categories</h2>
-            <div className="flex-1 w-full min-h-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+          {/* Expense Categories Chart - Glassmorphism */}
+          <div className="ios-card-glass p-4 flex flex-col min-h-[320px]">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Expense Categories</h2>
+            <div className="flex-1 w-full min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={expenseCategoryData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
+                    innerRadius={50}
+                    outerRadius={75}
                     paddingAngle={5}
                     dataKey="value"
                   >
@@ -544,14 +532,46 @@ export default function Dashboard() {
                     ))}
                   </Pie>
                   <Tooltip formatter={(value: number | undefined) => value !== undefined ? `₹${value.toLocaleString('en-IN')}` : ''} />
-                  <Legend iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+                  <Legend iconSize={8} wrapperStyle={{ fontSize: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
 
+          {/* Latest Subscriptions - Glassmorphism */}
+          <div className="ios-card-glass p-4 flex flex-col min-h-[320px]">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Latest Subscriptions</h2>
+            <div className="flex-1 overflow-auto">
+              {subscriptions
+                .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                .slice(0, 5)
+                .map((sub: any) => (
+                  <div key={sub._id} className="py-2.5 border-b border-gray-100 last:border-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-7 h-7 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-xs font-semibold mr-2">
+                          {sub.member?.name?.charAt(0).toUpperCase() || 'M'}
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-900">{sub.member?.name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500">{sub.location?.name || 'N/A'} • Seat {sub.seat?.seatNumber || 'N/A'}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-600">{sub.startDate ? new Date(sub.startDate).toLocaleDateString('en-GB') : '-'}</p>
+                        <p className="text-xs text-gray-400">to {sub.endDate ? new Date(sub.endDate).toLocaleDateString('en-GB') : '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              {subscriptions.length === 0 && (
+                <p className="text-xs text-gray-500 text-center py-4">No subscriptions yet</p>
+              )}
+            </div>
+          </div>
+
           {/* Top Expenses Breakdown */}
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[320px]">
              <h2 className="text-base font-bold text-gray-900 mb-4">Top Expenses</h2>
              <div className="space-y-3 overflow-y-auto flex-1 pr-2 min-h-0">
                 {expenseCategoryData.map((category, index) => (
@@ -570,7 +590,7 @@ export default function Dashboard() {
           </div>
 
           {/* Recent Transactions */}
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[320px]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-gray-900">Transactions</h2>
               <Link href="/reports" className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center transition-colors">
@@ -578,7 +598,7 @@ export default function Dashboard() {
                 View
               </Link>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 pr-2 min-h-0">
+            <div className="space-y-3 overflow-y-auto flex-1 pr-2 min-h-0" style={{ maxHeight: '250px' }}>
               {transactions.map((tx, index) => (
                 <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-100">
                   <div className="flex items-center gap-3">
@@ -599,9 +619,9 @@ export default function Dashboard() {
           </div>
 
           {/* Student Exam Focus */}
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[320px]">
             <h2 className="text-base font-bold text-gray-900 mb-4">Exam Focus</h2>
-            <div className="space-y-4 overflow-y-auto flex-1 pr-2 min-h-0">
+            <div className="space-y-4 overflow-y-auto flex-1 pr-2 min-h-0" style={{ maxHeight: '250px' }}>
               {examData.map((exam, index) => (
                 <div key={exam.prep}>
                   <div className="flex items-center justify-between">

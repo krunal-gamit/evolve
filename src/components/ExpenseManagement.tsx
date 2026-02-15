@@ -7,7 +7,6 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import Footer from './Footer';
 import ConfirmationModal from './ConfirmationModal';
 import { Toaster, toast } from 'react-hot-toast';
 
@@ -336,22 +335,18 @@ export default function ExpenseManagement() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-8 font-sans flex flex-col">
+    <div className="min-h-screen bg-[#F2F2F7] py-6 flex flex-col">
       <style jsx global>{`
-        /* For Webkit-based browsers (Chrome, Safari) */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb {
-          background-color: rgba(156, 163, 175, 0.5);
-          border-radius: 10px;
-          border: 2px solid transparent;
-          background-clip: content-box;
+          background-color: rgba(142, 142, 147, 0.4);
+          border-radius: 3px;
         }
-        ::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.8); }
-        /* For Firefox */
+        ::-webkit-scrollbar-thumb:hover { background-color: rgba(142, 142, 147, 0.6); }
         * {
           scrollbar-width: thin;
-          scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+          scrollbar-color: rgba(142, 142, 147, 0.4) transparent;
         }
       `}</style>
       <ConfirmationModal isOpen={showConfirmation} onClose={() => setShowConfirmation(false)} onConfirm={handleDeleteConfirm} title="Delete Expense" message="Are you sure you want to delete this expense? This action cannot be undone." />
@@ -605,7 +600,6 @@ export default function ExpenseManagement() {
           </div>
         </div>
       )}
-      <Footer />
     </div>
   );
 }
