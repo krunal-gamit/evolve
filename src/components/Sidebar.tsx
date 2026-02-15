@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Users, CreditCard, BarChart3, MapPin, IndianRupee, BookOpen, User, UserCheck, ClipboardList, Settings } from 'lucide-react';
+import { Home, Users, CreditCard, BarChart3, MapPin, IndianRupee, BookOpen, User, UserCheck, ClipboardList, Settings, Calendar } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
@@ -30,68 +30,60 @@ export default function Sidebar() {
   const isMember = session?.user.role === 'Member';
 
   return (
-    <div className="hidden md:flex flex-col w-64 bg-gray-900 text-white h-full border-r border-gray-800 shadow-xl">
-      <div className="p-6 flex items-center space-x-3 border-b border-gray-800">
-        <div className="bg-blue-600 p-2 rounded-lg">
-          <BookOpen size={24} className="text-white" />
+    <div className="hidden lg:flex flex-col w-56 bg-[#1C1C1E] text-white h-full border-r border-[#38383A]">
+      <div className="p-4 flex items-center space-x-3 border-b border-[#38383A]">
+        <div className="bg-[#007AFF] p-1.5 rounded-lg">
+          <BookOpen size={20} className="text-white" />
         </div>
-        <span className="text-xl font-bold tracking-wide">{projectName}</span>
+        <span className="text-lg font-semibold">{projectName}</span>
       </div>
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-        <Link href="/" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-          <Home size={20} />
-          <span className="font-medium">Dashboard</span>
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <Link href="/" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm">
+          <Home size={18} />
+          <span>Dashboard</span>
         </Link>
 
         {isMember ? (
           <>
-            <Link href="/profile" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <User size={20} />
-              <span className="font-medium">Profile</span>
+            <Link href="/profile" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm">
+              <User size={18} />
+              <span>Profile</span>
             </Link>
           </>
         ) : (
           <>
-            <Link href="/seats" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <MapPin size={20} />
-              <span className="font-medium">Seats & Subscriptions</span>
+            <Link href="/members" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm">
+              <Users size={18} />
+              <span>Members</span>
             </Link>
-            <Link href="/members" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <Users size={20} />
-              <span className="font-medium">Members</span>
+            <Link href="/seats" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm">
+              <Calendar size={18} />
+              <span>Subscriptions</span>
             </Link>
-            <Link href="/expenses" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <IndianRupee size={20} />
-              <span className="font-medium">Expenses</span>
+            <Link href="/expenses" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm">
+              <IndianRupee size={18} />
+              <span>Expenses</span>
             </Link>
-            <Link href="/fees" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <CreditCard size={20} />
-              <span className="font-medium">Fee Types</span>
+            <Link href="/reports" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm">
+              <BarChart3 size={18} />
+              <span>Reports</span>
             </Link>
-            <Link href="/reports" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <BarChart3 size={20} />
-              <span className="font-medium">Reports</span>
+            <Link href="/fees" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm">
+              <CreditCard size={18} />
+              <span>Fee Types</span>
             </Link>
           </>
         )}
 
         {session?.user.role === 'Admin' && (
           <>
-            <Link href="/admin/locations" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <MapPin size={20} />
-              <span className="font-medium">Locations</span>
+            <Link href="/admin/settings" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm">
+              <Settings size={18} />
+              <span>Settings</span>
             </Link>
-            <Link href="/admin/users" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <UserCheck size={20} />
-              <span className="font-medium">Manager Management</span>
-            </Link>
-            <Link href="/admin/settings" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <Settings size={20} />
-              <span className="font-medium">System Settings</span>
-            </Link>
-            <Link href="/admin/logs" className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-800 transition-all duration-200 group">
-              <ClipboardList size={20} />
-              <span className="font-medium">System Logs</span>
+            <Link href="/admin/logs" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm">
+              <ClipboardList size={18} />
+              <span>Logs</span>
             </Link>
           </>
         )}

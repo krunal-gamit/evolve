@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import Footer from '@/components/Footer';
 
 interface Notification {
   _id: string;
@@ -64,49 +65,56 @@ export default function NotificationsPage() {
   return (
     <div className="flex h-screen">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header pageTitle="All Notifications" />
-        <div className="flex-1 overflow-auto p-4">
-          <div className="mb-4">
-            <button
-              onClick={markAllAsRead}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Mark All as Read
-            </button>
-          </div>
-          <div className="space-y-4">
-            {notifications.map(notification => (
-              <div key={notification._id} className={`p-4 border rounded-lg ${!notification.read ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg">{notification.title}</h3>
-                    <p className="text-gray-700">{notification.message}</p>
-                    <div className="mt-2 flex items-center gap-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        notification.priority === 'high' ? 'bg-red-100 text-red-800' :
-                        notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {notification.priority}
-                      </span>
-                      <span className="text-sm text-gray-500">{new Date(notification.createdAt).toLocaleString()}</span>
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7]">
+          <div className="p-4 sm:p-5">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-800">All Notifications</h2>
+              <p className="text-gray-500 text-xs mt-0.5">View and manage notifications.</p>
+            </div>
+            <div className="mb-4">
+              <button
+                onClick={markAllAsRead}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Mark All as Read
+              </button>
+            </div>
+            <div className="space-y-4">
+              {notifications.map(notification => (
+                <div key={notification._id} className={`p-4 border rounded-lg ${!notification.read ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold text-lg">{notification.title}</h3>
+                      <p className="text-gray-700">{notification.message}</p>
+                      <div className="mt-2 flex items-center gap-4">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          notification.priority === 'high' ? 'bg-red-100 text-red-800' :
+                          notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {notification.priority}
+                        </span>
+                        <span className="text-sm text-gray-500">{new Date(notification.createdAt).toLocaleString()}</span>
+                      </div>
                     </div>
+                    {!notification.read && (
+                      <button
+                        onClick={() => markAsRead(notification._id)}
+                        className="text-blue-600 hover:text-blue-800 text-sm underline"
+                      >
+                        Mark as read
+                      </button>
+                    )}
                   </div>
-                  {!notification.read && (
-                    <button
-                      onClick={() => markAsRead(notification._id)}
-                      className="text-blue-600 hover:text-blue-800 text-sm underline"
-                    >
-                      Mark as read
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
-            {notifications.length === 0 && <p className="text-center text-gray-500">No notifications found.</p>}
+              ))}
+              {notifications.length === 0 && <p className="text-center text-gray-500">No notifications found.</p>}
+            </div>
           </div>
-        </div>
+        </main>
+        <Footer />
       </div>
     </div>
   );

@@ -50,16 +50,7 @@ export default function SeatsPage() {
   const [prefillLocation, setPrefillLocation] = useState<string | undefined>(undefined);
 
   // Show loading or redirecting
-  if (status === 'loading' || (session && isMember)) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Redirecting...</p>
-        </div>
-      </div>
-    );
-  }
+  const showLoading = status === 'loading' || (session && isMember);
 
   const fetchLocations = async () => {
     try {
@@ -74,6 +65,10 @@ export default function SeatsPage() {
       console.error('Error fetching locations:', error);
     }
   };
+
+  useEffect(() => {
+    fetchLocations();
+  }, []);
 
   const fetchSeats = async () => {
     try {
@@ -150,7 +145,7 @@ export default function SeatsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header pageTitle="Facility Dashboard" />
@@ -171,9 +166,10 @@ export default function SeatsPage() {
             scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
           }
         `}</style>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          
-          <div className="flex justify-end mb-6 gap-4">
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7] p-4">
+          {showLoading ? null : (
+            <>
+            <div className="flex justify-end mb-6 gap-4 mt-4">
             {locations.length > 0 && (
               <select
                 value={selectedLocation}
@@ -196,8 +192,7 @@ export default function SeatsPage() {
               New Subscription
             </button>}
           </div>
-          
-          {/* Stats Overview */}
+
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="p-5">
@@ -399,58 +394,10 @@ export default function SeatsPage() {
               onLocationChange={setSelectedLocation}
             />
           </div>
-
-          {/* Seat Detail Modal */}
-          {selectedSeat && (
-            <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 border border-gray-100 overflow-hidden animate-fade-in">
-                <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50">
-                  <h3 className="text-lg font-bold text-gray-900">Seat {selectedSeat.seatNumber} Details</h3>
-                  <button onClick={() => setSelectedSeat(null)} className="text-gray-400 hover:text-gray-500 transition-colors">
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Status</label>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize mt-1 ${selectedSeat.status === 'vacant' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {selectedSeat.status}
-                    </span>
-                  </div>
-                  {selectedSeat.assignedMember && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Assigned Member</label>
-                      <div className="mt-1 text-lg font-semibold text-gray-900">{selectedSeat.assignedMember.name}</div>
-                    </div>
-                  )}
-                  {selectedSeat.subscription && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Subscription Ends</label>
-                        <div className="mt-1 text-gray-900">
-                          {new Date(selectedSeat.subscription.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Subscription Status</label>
-                        <div className="mt-1 text-gray-900 capitalize">{selectedSeat.subscription.status}</div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="bg-gray-50 px-6 py-4 flex justify-end">
-                  <button
-                    onClick={() => setSelectedSeat(null)}
-                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium text-sm transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
+          </>
           )}
-          <Footer />
         </main>
+        <Footer />
       </div>
     </div>
   );

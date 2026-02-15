@@ -5,13 +5,18 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
+import Footer from '@/components/Footer';
 import { toast } from 'react-hot-toast';
-import { Save, Settings as SettingsIcon, Users, Building } from 'lucide-react';
+import { Save, Settings as SettingsIcon, Users, Building, MapPin, UserCheck } from 'lucide-react';
+import LocationManagement from '@/components/LocationManagement';
+import UserManagement from '@/components/UserManagement';
 
 interface Settings {
   projectName: string;
   maxSeats: string;
 }
+
+type TabType = 'general' | 'fees' | 'locations' | 'managers';
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -22,6 +27,15 @@ export default function SettingsPage() {
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabType>('general');
+
+  const isAdmin = session?.user?.role === 'Admin';
+
+  useEffect(() => {
+    if (!initialLoading) {
+      setActiveTab('general');
+    }
+  }, [initialLoading]);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -53,7 +67,6 @@ export default function SettingsPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Ensure maxSeats is sent as a number to the backend
       const payload = {
         ...settings,
         maxSeats: parseInt(settings.maxSeats, 10)
@@ -64,7 +77,6 @@ export default function SettingsPage() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        // Sync seats with the new capacity
         await fetch('/api/seats/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -87,6 +99,12 @@ export default function SettingsPage() {
     setSettings(prev => ({ ...prev, [name]: value }));
   };
 
+  const tabs = [
+    { id: 'general' as TabType, label: 'General', icon: SettingsIcon },
+    { id: 'locations' as TabType, label: 'Locations', icon: MapPin },
+    { id: 'managers' as TabType, label: 'Managers', icon: UserCheck },
+  ];
+
   if (status === 'loading' || initialLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
@@ -103,113 +121,166 @@ export default function SettingsPage() {
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header pageTitle="System Settings" />
+        <Header pageTitle="Settings" />
         
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-full mx-auto space-y-6">
             
-            {/* Header Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <SettingsIcon className="w-5 h-5 text-blue-600" />
-                  Global Configuration
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">Manage general system settings and constraints.</p>
-              </div>
+            {/* Tab Navigation */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2">
+              <nav className="flex flex-wrap gap-2">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      activeTab === tab.id
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Project Settings Card */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full">
-                  <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-                    <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                      <Building className="w-4 h-4 text-gray-500" />
-                      Project Identity
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">Define the core identity of your project.</p>
+            {/* General Settings Tab */}
+            {activeTab === 'general' && (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <SettingsIcon className="w-5 h-5 text-blue-600" />
+                      Global Configuration
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">Manage general system settings and constraints.</p>
                   </div>
-                  <div className="p-6 space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="projectName"
-                          value={settings.projectName}
-                          onChange={handleInputChange}
-                          className="w-full pl-4 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400"
-                          placeholder="e.g. Evolve System"
-                        />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Project Settings Card */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full">
+                    <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        <Building className="w-4 h-4 text-gray-500" />
+                        Project Identity
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">Define the core identity of your project.</p>
+                    </div>
+                    <div className="p-6 space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            name="projectName"
+                            value={settings.projectName}
+                            onChange={handleInputChange}
+                            className="w-full pl-4 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400"
+                            placeholder="e.g. Evolve System"
+                          />
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500">This name will be displayed across the application header and emails.</p>
                       </div>
-                      <p className="mt-2 text-xs text-gray-500">This name will be displayed across the application header and emails.</p>
+                    </div>
+                  </div>
+
+                  {/* Capacity Settings Card */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full">
+                    <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gray-500" />
+                        Capacity Management
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">Control user access and seat limits.</p>
+                    </div>
+                    <div className="p-6 space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Seats</label>
+                        <div className="relative max-w-xs">
+                          <input
+                            type="number"
+                            name="maxSeats"
+                            value={settings.maxSeats}
+                            onChange={handleInputChange}
+                            className="w-full pl-4 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400"
+                            placeholder="100"
+                            min="1"
+                          />
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500">
+                          Total number of user accounts allowed in the system. 
+                          Currently used seats are calculated based on active users.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Capacity Settings Card */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full">
-                  <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-                    <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                      <Users className="w-4 h-4 text-gray-500" />
-                      Capacity Management
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">Control user access and seat limits.</p>
-                  </div>
-                  <div className="p-6 space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Seats</label>
-                      <div className="relative max-w-xs">
-                        <input
-                          type="number"
-                          name="maxSeats"
-                          value={settings.maxSeats}
-                          onChange={handleInputChange}
-                          className="w-full pl-4 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400"
-                          placeholder="100"
-                          min="1"
-                        />
-                      </div>
-                      <p className="mt-2 text-xs text-gray-500">
-                        Total number of user accounts allowed in the system. 
-                        Currently used seats are calculated based on active users.
-                      </p>
-                    </div>
-                  </div>
+                {/* Action Bar */}
+                <div className="flex items-center justify-end gap-4 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => fetchSettings()}
+                    className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Locations Tab */}
+            {activeTab === 'locations' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-blue-600" />
+                    Locations Management
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">Create and manage your reading room facilities.</p>
+                </div>
+                <LocationManagement />
+              </div>
+            )}
+
+            {/* Managers Tab */}
+            {activeTab === 'managers' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-2">
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-blue-600" />
+                    Manager Management
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">Add, view, and delete manager accounts.</p>
+                </div>
+                <div className="-m-6 -mb-6">
+                  <UserManagement />
                 </div>
               </div>
-
-              {/* Action Bar */}
-              <div className="flex items-center justify-end gap-4 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => fetchSettings()}
-                  className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors"
-                >
-                  Reset
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Save Changes
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         </main>
+        <Footer />
       </div>
     </div>
   );

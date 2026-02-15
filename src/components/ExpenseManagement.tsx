@@ -7,7 +7,6 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import Footer from './Footer';
 import ConfirmationModal from './ConfirmationModal';
 import { Toaster, toast } from 'react-hot-toast';
 
@@ -31,6 +30,7 @@ export default function ExpenseManagement() {
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   const categories = ['Equipment', 'Maintenance', 'Utilities', 'Salaries', 'Marketing', 'Supplies', 'Rent', 'Other'];
   const methods = ['Cash', 'UPI', 'Bank Transfer', 'Cheque'];
@@ -139,8 +139,8 @@ export default function ExpenseManagement() {
       Category: expense.category,
       'Paid To': expense.paidTo,
       Method: expense.method,
-      Date: new Date(expense.date).toLocaleDateString('en-GB'),
-      'Recorded': new Date(expense.createdAt).toLocaleDateString('en-GB')
+      Date: new Date(expense.date).toISOString().split('T')[0],
+      'Recorded': new Date(expense.createdAt).toISOString().split('T')[0]
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -155,8 +155,8 @@ export default function ExpenseManagement() {
       Category: expense.category,
       'Paid To': expense.paidTo,
       Method: expense.method,
-      Date: new Date(expense.date).toLocaleDateString('en-GB'),
-      'Recorded': new Date(expense.createdAt).toLocaleDateString('en-GB')
+      Date: new Date(expense.date).toISOString().split('T')[0],
+      'Recorded': new Date(expense.createdAt).toISOString().split('T')[0]
     }));
     const csv = Papa.unparse(data);
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -180,6 +180,117 @@ export default function ExpenseManagement() {
       head: headers, body: data, styles: { fontSize: 8 }
     });
     doc.save('expenses.pdf');
+  };
+
+  const handleUpload = async () => {
+    if (!uploadFile) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = new Uint8Array(e.target?.result as ArrayBuffer);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Assume first row is headers
+      const headers = jsonData[0] as string[];
+      const rows = jsonData.slice(1) as any[][];
+
+      const parseDate = (dateValue: any): Date | null => {
+        if (!dateValue) return null;
+        if (dateValue instanceof Date) {
+          return isNaN(dateValue.getTime()) ? null : dateValue;
+        }
+        if (typeof dateValue === 'number') {
+          // Excel serial date number
+          return new Date((dateValue - 25569) * 86400 * 1000);
+        }
+        // Handle string dates (ISO format YYYY-MM-DD or other formats)
+        const parsed = new Date(dateValue);
+        if (!isNaN(parsed.getTime())) {
+          return parsed;
+        }
+        // Try parsing DD/MM/YYYY format
+        const parts = String(dateValue).split('/');
+        if (parts.length === 3) {
+          const [day, month, year] = parts;
+          const date = new Date(`${year}-${month}-${day}`);
+          if (!isNaN(date.getTime())) return date;
+        }
+        return null;
+      };
+
+      const parsedExpenses = rows.map(row => {
+        const obj: any = {};
+        headers.forEach((header, index) => {
+          obj[header] = row[index];
+        });
+        const parsedDate = parseDate(obj['Date']);
+        return {
+          description: obj['Description'],
+          amount: parseFloat(obj['Amount']),
+          category: obj['Category'],
+          paidTo: obj['Paid To'],
+          method: obj['Method'],
+          date: parsedDate,
+        };
+      });
+
+      // Validate and check for duplicates
+      const validExpenses = parsedExpenses.filter(exp => 
+        exp.description && 
+        exp.category && 
+        exp.paidTo && 
+        exp.date && 
+        !isNaN(exp.amount) && 
+        exp.method
+      );
+
+      // Check for duplicates against existing expenses in the database
+      const newExpenses = validExpenses.filter(newExp => {
+        const isDuplicate = expenses.some(existing => 
+          existing.description?.toLowerCase() === newExp.description?.toLowerCase() &&
+          existing.amount === newExp.amount &&
+          existing.paidTo?.toLowerCase() === newExp.paidTo?.toLowerCase() &&
+          new Date(existing.date).toDateString() === newExp.date?.toDateString()
+        );
+        return !isDuplicate;
+      });
+
+      if (validExpenses.length === 0) {
+        toast.error('No valid expenses found in the file.');
+        return;
+      }
+
+      if (newExpenses.length === 0) {
+        toast.error('All expenses in the file already exist. No new expenses to upload.');
+        return;
+      }
+
+      if (newExpenses.length < validExpenses.length) {
+        const skipped = validExpenses.length - newExpenses.length;
+        toast(`${skipped} duplicate expense(s) skipped. Uploading ${newExpenses.length} new expense(s).`);
+      }
+
+      try {
+        const res = await fetch('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newExpenses),
+        });
+        if (res.ok) {
+          toast.success(`Uploaded ${newExpenses.length} expenses successfully.`);
+          setUploadFile(null);
+          fetchExpenses(); // Refresh data
+        } else {
+          const error = await res.json();
+          toast.error(error.error || 'Failed to upload expenses.');
+        }
+      } catch (error) {
+        toast.error('Error uploading expenses.');
+      }
+    };
+    reader.readAsArrayBuffer(uploadFile);
   };
 
   const columns = useMemo<ColumnDef<Expense>[]>(() => [
@@ -224,22 +335,18 @@ export default function ExpenseManagement() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-8 font-sans flex flex-col">
+    <div className="min-h-screen bg-[#F2F2F7] py-6 flex flex-col">
       <style jsx global>{`
-        /* For Webkit-based browsers (Chrome, Safari) */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb {
-          background-color: rgba(156, 163, 175, 0.5);
-          border-radius: 10px;
-          border: 2px solid transparent;
-          background-clip: content-box;
+          background-color: rgba(142, 142, 147, 0.4);
+          border-radius: 3px;
         }
-        ::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.8); }
-        /* For Firefox */
+        ::-webkit-scrollbar-thumb:hover { background-color: rgba(142, 142, 147, 0.6); }
         * {
           scrollbar-width: thin;
-          scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+          scrollbar-color: rgba(142, 142, 147, 0.4) transparent;
         }
       `}</style>
       <ConfirmationModal isOpen={showConfirmation} onClose={() => setShowConfirmation(false)} onConfirm={handleDeleteConfirm} title="Delete Expense" message="Are you sure you want to delete this expense? This action cannot be undone." />
@@ -254,6 +361,24 @@ export default function ExpenseManagement() {
             </p>
           </div>
           <div className="mt-4 flex md:mt-0 md:ml-4 gap-4">
+            <div className="flex items-center">
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 max-w-xs"
+              />
+            </div>
+            <button
+              onClick={handleUpload}
+              disabled={!uploadFile}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+              Upload
+            </button>
             <button
               onClick={handleAdd}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
@@ -475,7 +600,6 @@ export default function ExpenseManagement() {
           </div>
         </div>
       )}
-      <Footer />
     </div>
   );
 }

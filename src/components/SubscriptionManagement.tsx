@@ -242,12 +242,6 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (new Date(form.startDate) < today) {
-      setError('Start date cannot be in the past');
-      return;
-    }
     if (parseFloat(form.amount) <= 0) {
       setError('Amount must be greater than 0');
       return;
@@ -388,7 +382,7 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
       const days = parseInt(duration.split(' ')[0]) || 0;
       start.setDate(start.getDate() + days);
     }
-    return start.toLocaleDateString();
+    return start.toLocaleDateString('en-GB');
   };
 
   const vacantSeats = seats.filter(s => s.status === 'vacant');
@@ -855,7 +849,6 @@ export default function SubscriptionManagement({ isOpen = false, onClose = () =>
                     value={form.startDate}
                     onChange={(e) => setForm({ ...form, startDate: e.target.value })}
                     required
-                    min={new Date().toISOString().split('T')[0]}
                     className="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm py-2.5 px-3 border bg-gray-50 focus:bg-white transition-colors"
                   />
                 </div>

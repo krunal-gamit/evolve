@@ -8,7 +8,6 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import Footer from './Footer';
 import { Toaster } from 'react-hot-toast';
 
 interface Subscription {
@@ -63,7 +62,6 @@ export default function Reports() {
   const [endDateFilter, setEndDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [reportType, setReportType] = useState<'income' | 'expense'>('income');
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   const fetchSubscriptions = async () => {
     const res = await fetch('/api/subscriptions');
@@ -144,7 +142,7 @@ export default function Reports() {
     { accessorKey: 'member.memberId', header: 'Member ID' },
     { accessorKey: 'member.name', header: 'Name' },
     { accessorKey: 'member.phone', header: 'Phone' },
-    { accessorKey: 'seat.seatNumber', header: 'Seat Number' },
+    { accessorKey: 'seat.seatNumber', header: 'Seat' },
     {
       accessorKey: 'startDate',
       header: 'Start Date',
@@ -156,7 +154,7 @@ export default function Reports() {
       cell: ({ getValue }) => format(new Date(getValue<string>()), 'dd/MM/yyyy')
     },
     { accessorKey: 'duration', header: 'Duration' },
-    { accessorKey: 'totalAmount', header: 'Total Amount', cell: ({ getValue }) => `₹${getValue<number>().toLocaleString('en-IN')}` },
+    { accessorKey: 'totalAmount', header: 'Amount', cell: ({ getValue }) => `₹${getValue<number>().toLocaleString('en-IN')}` },
     { 
       accessorKey: 'status', 
       header: 'Status',
@@ -331,62 +329,6 @@ export default function Reports() {
     }
   };
 
-  const handleUpload = async () => {
-    if (!uploadFile) return;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const data = new Uint8Array(e.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-      // Assume first row is headers
-      const headers = jsonData[0] as string[];
-      const rows = jsonData.slice(1) as any[][];
-
-      const expenses = rows.map(row => {
-        const obj: any = {};
-        headers.forEach((header, index) => {
-          obj[header] = row[index];
-        });
-        return {
-          description: obj['Description'],
-          category: obj['Category'],
-          paidTo: obj['Paid To'],
-          date: new Date(obj['Date']),
-          amount: parseFloat(obj['Amount']),
-          method: obj['Method'],
-        };
-      });
-
-      // Validate
-      const validExpenses = expenses.filter(exp => exp.description && exp.category && exp.paidTo && exp.date && !isNaN(exp.amount) && exp.method);
-
-      if (validExpenses.length === 0) {
-        alert('No valid expenses found in the file.');
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/expenses', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(validExpenses),
-        });
-        if (res.ok) {
-          alert(`Uploaded ${validExpenses.length} expenses successfully.`);
-          setUploadFile(null);
-          fetchExpenses(); // Refresh data
-        } else {
-          alert('Failed to upload expenses.');
-        }
-      } catch (error) {
-        alert('Error uploading expenses.');
-      }
-    };
-    reader.readAsArrayBuffer(uploadFile);
-  };
 
   const currentTable = reportType === 'income' ? tableSubscriptions : tableExpenses;
 
@@ -517,28 +459,7 @@ export default function Reports() {
           </div>
         </div>
 
-        {reportType === 'expense' && !isMember && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <div className="flex flex-col sm:flex-row gap-4 items-end">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Upload Expense Report</label>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-              </div>
-              <button
-                onClick={handleUpload}
-                disabled={!uploadFile}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Upload
-              </button>
-            </div>
-          </div>
-        )}
+
       </div>
 
       {/* Data Table */}
@@ -549,7 +470,7 @@ export default function Reports() {
             {currentTable.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (
-                  <th key={header.id} className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors" onClick={header.column.getToggleSortingHandler()}>
+                  <th key={header.id} className="px-2 py-1 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors" onClick={header.column.getToggleSortingHandler()}>
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header as any, header.getContext())}
                     {{ asc: ' ↑', desc: ' ↓' }[header.column.getIsSorted() as string] ?? null}
                   </th>
@@ -561,7 +482,7 @@ export default function Reports() {
             {currentTable.getRowModel().rows.map(row => (
               <tr key={row.id}>
                 {row.getVisibleCells().map(cell => (
-                  <td key={cell.id} className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">
+                  <td key={cell.id} className="px-2 py-1 whitespace-nowrap text-xs text-gray-700">
                     {flexRender(cell.column.columnDef.cell as any, cell.getContext())}
                   </td>
                 ))}
@@ -621,7 +542,6 @@ export default function Reports() {
         </div>
       </div>
       </div>
-      <Footer />
     </div>
   );
 }

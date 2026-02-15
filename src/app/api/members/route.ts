@@ -37,11 +37,20 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
-    const { name, email, phone, address, examPrep } = await request.json();
+    const { name, email, phone, address, examPrep, joinDate, memberId } = await request.json();
 
     // Validate required fields
     if (!name || !email || !phone || !address) {
       return NextResponse.json({ error: 'Name, email, phone, and address are required' }, { status: 400 });
+    }
+
+    // Parse join date if provided
+    let createdAt = new Date();
+    if (joinDate) {
+      const parsedDate = new Date(joinDate);
+      if (!isNaN(parsedDate.getTime())) {
+        createdAt = parsedDate;
+      }
     }
 
     // Check if member with this email already exists
@@ -56,26 +65,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User account with this email already exists' }, { status: 400 });
     }
 
-    // Generate memberId: EVOLVE[4digit year][2digit month][001]
-    // Sequence resets each month
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const monthPrefix = `EVOLVE${year}${month}`;
+    // Use provided memberId or generate a new one
+    let finalMemberId = memberId;
     
-    // Find last member from current month only
-    const lastMemberOfMonth = await Member.findOne({
-      memberId: { $regex: `^${monthPrefix}` }
-    }).sort({ memberId: -1 });
-    
-    let nextNumber = 1;
-    if (lastMemberOfMonth && lastMemberOfMonth.memberId) {
-      const lastNum = parseInt(lastMemberOfMonth.memberId.slice(-3));
-      nextNumber = lastNum + 1;
+    // If memberId provided, check if it already exists
+    if (finalMemberId) {
+      const existingWithMemberId = await Member.findOne({ memberId: finalMemberId });
+      if (existingWithMemberId) {
+        return NextResponse.json({ error: 'Member ID already exists' }, { status: 400 });
+      }
+    } else {
+      // Generate memberId: EVOLVE[4digit year][2digit month][001]
+      // Sequence resets each month
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const monthPrefix = `EVOLVE${year}${month}`;
+      
+      // Find last member from current month only
+      const lastMemberOfMonth = await Member.findOne({
+        memberId: { $regex: `^${monthPrefix}` }
+      }).sort({ memberId: -1 });
+      
+      let nextNumber = 1;
+      if (lastMemberOfMonth && lastMemberOfMonth.memberId) {
+        const lastNum = parseInt(lastMemberOfMonth.memberId.slice(-3));
+        nextNumber = lastNum + 1;
+      }
+      finalMemberId = `${monthPrefix}${nextNumber.toString().padStart(3, '0')}`;
     }
-    const memberId = `${monthPrefix}${nextNumber.toString().padStart(3, '0')}`;
 
-    const member = new Member({ memberId, name, email, phone, address, examPrep });
+    const member = new Member({ memberId: finalMemberId, name, email, phone, address, examPrep, createdAt });
 
     await member.save();
 

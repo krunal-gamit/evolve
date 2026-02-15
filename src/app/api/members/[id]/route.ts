@@ -6,6 +6,7 @@ import dbConnect from '@/lib/mongodb';
 import Member from '@/models/Member';
 import User from '@/models/User';
 import Log from '@/models/Log';
+import bcrypt from 'bcryptjs';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -69,19 +70,39 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
 
-  const { name, email, phone, address, examPrep } = await request.json();
+  const { name, email, phone, address, examPrep, joinDate, password } = await request.json();
 
-  const member = await Member.findByIdAndUpdate(id, { name, email, phone, address, examPrep }, { new: true });
+  // Parse join date if provided
+  let createdAt = undefined;
+  if (joinDate) {
+    const parsedDate = new Date(joinDate);
+    if (!isNaN(parsedDate.getTime())) {
+      createdAt = parsedDate;
+    }
+  }
+
+  const updateData: any = { name, email, phone, address, examPrep };
+  if (createdAt) {
+    updateData.createdAt = createdAt;
+  }
+
+  const member = await Member.findByIdAndUpdate(id, updateData, { new: true });
 
   if (!member) {
     return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+  }
+
+  // Update password if provided
+  if (password) {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await User.findOneAndUpdate({ email: member.email }, { password: hashedPassword });
   }
 
   await Log.create({
     action: 'UPDATE',
     entity: 'Member',
     entityId: id,
-    details: `Updated member: ${member.name}`,
+    details: password ? `Updated member: ${member.name} (password changed)` : `Updated member: ${member.name}`,
     performedBy: session.user.email,
   });
 
