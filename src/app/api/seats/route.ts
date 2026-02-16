@@ -8,11 +8,23 @@ import Subscription from '@/models/Subscription';
 export async function GET(request: Request) {
   try {
     await dbConnect();
+    const session = await auth();
     const { searchParams } = new URL(request.url);
     const locationId = searchParams.get('locationId');
 
+    // If user is a Manager with specific location assignments, restrict to those locations
+    let managerLocations: string[] = [];
+    if (session?.user?.role === 'Manager' && session.user.locations) {
+      managerLocations = session.user.locations;
+    }
+
     const filter: any = {};
-    if (locationId) {
+    
+    // Managers with location assignments can only see seats at those locations
+    if (managerLocations.length > 0) {
+      filter.location = { $in: managerLocations };
+    } else if (locationId) {
+      // Admins or managers without location assignment can filter by locationId
       filter.location = locationId;
     }
 

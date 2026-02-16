@@ -11,21 +11,47 @@ interface User {
   email: string;
   name: string;
   role: string;
+  locations?: { _id: string; name: string }[];
   createdAt: string;
+}
+
+interface Location {
+  _id: string;
+  name: string;
+  address: string;
 }
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newLocations, setNewLocations] = useState<string[]>([]); // Empty means all locations
   const [globalFilter, setGlobalFilter] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetId, setResetId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState('');
+
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch('/api/locations');
+      if (res.ok) {
+        const data = await res.json();
+        setLocations(data);
+      }
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchLocations();
+  }, []);
 
 
   const fetchUsers = async () => {
@@ -80,7 +106,13 @@ export default function UserManagement() {
     const res = await fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: newEmail, name: newName, password: newPassword, role: 'Manager' }),
+      body: JSON.stringify({ 
+        email: newEmail, 
+        name: newName, 
+        password: newPassword, 
+        role: 'Manager',
+        locations: newLocations.length > 0 ? newLocations : [] // Empty array means all locations
+      }),
     });
     if (res.ok) {
       toast.success('Manager added successfully!');
@@ -88,6 +120,7 @@ export default function UserManagement() {
       setNewEmail('');
       setNewName('');
       setNewPassword('');
+      setNewLocations([]);
       fetchUsers();
     } else {
       const error = await res.json().catch(() => ({}));
@@ -126,6 +159,17 @@ export default function UserManagement() {
       )
     },
     { accessorKey: 'email', header: 'Email' },
+    { 
+      accessorKey: 'locations', 
+      header: 'Assigned Locations',
+      cell: ({ row }) => (
+        <span className="text-gray-600">
+          {row.original.locations && row.original.locations.length > 0 
+            ? row.original.locations.map(l => l.name).join(', ')
+            : 'All Locations'}
+        </span>
+      )
+    },
     {
       accessorKey: 'createdAt',
       header: 'Created At',
@@ -217,7 +261,7 @@ export default function UserManagement() {
               ))}
               {table.getRowModel().rows.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
                     No managers found.
                   </td>
                 </tr>
@@ -318,6 +362,27 @@ export default function UserManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors bg-gray-50 focus:bg-white"
                     required
                   />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Location Assignment</label>
+                  <select
+                    multiple
+                    value={newLocations}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value);
+                      setNewLocations(selected);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors bg-gray-50 focus:bg-white min-h-[100px]"
+                  >
+                    {locations.map((loc) => (
+                      <option key={loc._id} value={loc._id}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Hold Ctrl/Cmd to select multiple locations. Leave unselected for "All Locations".
+                  </p>
                 </div>
                 <div className="flex justify-end gap-3">
                   <button

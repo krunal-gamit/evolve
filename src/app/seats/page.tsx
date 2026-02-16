@@ -30,6 +30,8 @@ export default function SeatsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const isMember = session?.user.role === 'Member';
+  const isManager = session?.user.role === 'Manager';
+  const managerLocations = session?.user.locations as string[] | undefined;
 
   // Redirect members to dashboard
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function SeatsPage() {
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
   const [prefillSeat, setPrefillSeat] = useState('');
   const [prefillLocation, setPrefillLocation] = useState<string | undefined>(undefined);
+  const [isLocationLocked, setIsLocationLocked] = useState(false);
 
   // Show loading or redirecting
   const showLoading = status === 'loading' || (session && isMember);
@@ -58,8 +61,21 @@ export default function SeatsPage() {
       if (res.ok) {
         const data = await res.json();
         setLocations(data);
-        // Ensure "All" is selected by default
-        setSelectedLocation('');
+        
+        // If manager has specific location assignments, show them grouped by default
+        if (managerLocations && managerLocations.length > 0) {
+          if (managerLocations.length === 1) {
+            // Single location - show that location
+            setSelectedLocation(managerLocations[0]);
+          } else {
+            // Multiple locations - show all grouped (empty = all)
+            setSelectedLocation('');
+          }
+          setIsLocationLocked(true);
+        } else {
+          // Ensure "All" is selected by default for admins/managers without location restriction
+          setSelectedLocation('');
+        }
       }
     } catch (error) {
       console.error('Error fetching locations:', error);
@@ -68,7 +84,7 @@ export default function SeatsPage() {
 
   useEffect(() => {
     fetchLocations();
-  }, []);
+  }, [managerLocations]);
 
   const fetchSeats = async () => {
     try {
@@ -170,7 +186,7 @@ export default function SeatsPage() {
           {showLoading ? null : (
             <>
             <div className="flex justify-end mb-6 gap-4 mt-4">
-            {locations.length > 0 && (
+            {locations.length > 0 && !isLocationLocked && (
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
@@ -183,6 +199,16 @@ export default function SeatsPage() {
                   </option>
                 ))}
               </select>
+            )}
+            {isLocationLocked && locations.length > 0 && managerLocations && managerLocations.length > 1 && (
+              <div className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-medium">
+                📍 Managing {managerLocations.length} Locations
+              </div>
+            )}
+            {isLocationLocked && locations.length > 0 && (!managerLocations || managerLocations.length === 1) && selectedLocation && (
+              <div className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-medium">
+                📍 {locations.find(loc => loc._id === selectedLocation)?.name}
+              </div>
             )}
             {!isMember && <button
               onClick={() => setSubscriptionModalOpen(true)}
@@ -289,12 +315,13 @@ export default function SeatsPage() {
               
               {/* Group seats by location if showing all */}
               {!selectedLocation ? (
-                // Show all locations grouped
-                locations.filter(loc => loc._id).map(location => {
-                  const locationSeats = seats.filter(s => s.location?._id === location._id);
-                  if (locationSeats.length === 0) return null;
+                // Show all locations grouped (or manager's assigned locations if locked)
+                (isLocationLocked && managerLocations ? managerLocations : locations.filter(loc => loc._id).map(loc => loc._id)).map(locationId => {
+                  const location = locations.find(l => l._id === locationId);
+                  const locationSeats = seats.filter(s => s.location?._id === locationId);
+                  if (locationSeats.length === 0 || !location) return null;
                   return (
-                    <div key={location._id} className="mb-6">
+                    <div key={locationId} className="mb-6">
                       <h4 className="text-sm font-semibold text-gray-700 mb-2">{location.name} - {location.address}</h4>
                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                         {locationSeats.map(seat => (

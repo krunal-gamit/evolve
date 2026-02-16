@@ -8,12 +8,14 @@ declare module 'next-auth' {
       name: string;
       role: string;
       qrCode?: string;
+      locations?: string[];
     };
   }
 
   interface User {
     role: string;
     qrCode?: string;
+    locations?: string[];
   }
 }
 
@@ -21,5 +23,6 @@ declare module 'next-auth/jwt' {
   interface JWT {
     role: string;
     qrCode?: string;
+    locations?: string[];
   }
 }

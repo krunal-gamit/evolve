@@ -45,6 +45,7 @@ export const authOptions = {
             name: user.name,
             role: user.role,
             qrCode: user.qrCode || undefined,
+            locations: user.locations || [],
           };
         } catch (error) {
           console.error('Auth error:', error);
@@ -58,19 +59,21 @@ export const authOptions = {
       if (user) {
         token.role = user.role;
         token.qrCode = user.qrCode;
+        token.locations = user.locations || [];
       }
       return token;
     },
     async session({ session, token }: any) {
       if (token.sub) {
         await dbConnect();
-        const user = await User.findById(token.sub).select('name email role qrCode');
+        const user = await User.findById(token.sub).select('name email role qrCode locations');
         if (user && session.user) {
           session.user.id = user._id.toString();
           session.user.name = user.name;
           session.user.email = user.email;
           session.user.role = user.role;
           session.user.qrCode = user.qrCode || undefined;
+          session.user.locations = user.locations?.map((loc: any) => loc.toString()) || [];
         }
       }
       return session;

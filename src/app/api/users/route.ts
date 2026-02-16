@@ -15,7 +15,7 @@ export async function GET() {
 
   await dbConnect();
 
-  const users = await User.find(); // Include password for admin
+  const users = await User.find().populate('locations', 'name'); // Include locations details
   return NextResponse.json(users);
 }
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   await dbConnect();
 
-  const { email, name, password, role } = await request.json();
+  const { email, name, password, role, locations } = await request.json();
 
   if (!email || !name || !password || !role) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
@@ -35,6 +35,17 @@ export async function POST(request: NextRequest) {
 
   if (!['Admin', 'Manager', 'Member'].includes(role)) {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+  }
+
+  // Validate locations if provided
+  if (locations && Array.isArray(locations)) {
+    const Location = (await import('@/models/Location')).default;
+    for (const locId of locations) {
+      const locationExists = await Location.findById(locId);
+      if (!locationExists) {
+        return NextResponse.json({ error: `Invalid location: ${locId}` }, { status: 400 });
+      }
+    }
   }
 
   const existingUser = await User.findOne({ email });
@@ -49,6 +60,7 @@ export async function POST(request: NextRequest) {
     name,
     password: hashedPassword,
     role,
+    locations: locations || [], // Empty array means all locations for managers
   });
 
   await newUser.save();
@@ -57,7 +69,7 @@ export async function POST(request: NextRequest) {
     action: 'CREATE',
     entity: 'User',
     entityId: newUser._id,
-    details: `Created user: ${name} (${email}) with role ${role}`,
+    details: `Created user: ${name} (${email}) with role ${role}${locations && locations.length > 0 ? ' at locations: ' + locations.join(', ') : ' (all locations)'}`,
     performedBy: session.user.email,
   });
 

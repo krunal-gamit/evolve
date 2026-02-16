@@ -25,6 +25,7 @@ interface Subscription {
     seatNumber: number;
     status: string;
   };
+  location?: { _id: string; name: string; address: string };
   startDate: string;
   endDate: string;
   duration: string;
@@ -48,6 +49,7 @@ interface Expense {
   paidTo: string;
   method: string;
   date: string;
+  location?: { _id: string; name: string };
   createdAt: string;
 }
 
@@ -143,6 +145,11 @@ export default function Reports() {
     { accessorKey: 'member.name', header: 'Name' },
     { accessorKey: 'member.phone', header: 'Phone' },
     { accessorKey: 'seat.seatNumber', header: 'Seat' },
+    { 
+      accessorKey: 'location', 
+      header: 'Location',
+      cell: ({ row }) => row.original.location?.name || '-'
+    },
     {
       accessorKey: 'startDate',
       header: 'Start Date',
@@ -179,6 +186,11 @@ export default function Reports() {
 
   const expenseColumns: ColumnDef<Expense>[] = [
     { accessorKey: 'description', header: 'Description' },
+    { 
+      accessorKey: 'location', 
+      header: 'Location',
+      cell: ({ row }) => row.original.location?.name || '-'
+    },
     { accessorKey: 'category', header: 'Category' },
     { accessorKey: 'paidTo', header: 'Paid To' },
     { accessorKey: 'date', header: 'Date', cell: ({ getValue }) => format(new Date(getValue<string>()), 'dd/MM/yyyy') },
@@ -251,6 +263,7 @@ export default function Reports() {
       'Member ID': sub.member.memberId,
       Name: sub.member.name,
       Phone: sub.member.phone,
+      Location: sub.location?.name || 'N/A',
       'Seat Number': sub.seat.seatNumber,
       'Start Date': format(new Date(sub.startDate), 'dd/MM/yyyy'),
       'End Date': format(new Date(sub.endDate), 'dd/MM/yyyy'),
@@ -271,6 +284,7 @@ export default function Reports() {
       const data = filteredExpenses.map(exp => ({
         Description: exp.description,
         Category: exp.category,
+        Location: exp.location?.name || 'N/A',
         'Paid To': exp.paidTo,
         Date: format(new Date(exp.date), 'dd/MM/yyyy'),
         Amount: exp.amount,
@@ -290,11 +304,12 @@ export default function Reports() {
   const exportToPDF = () => {
     const doc = new jsPDF('l', 'mm', 'a4');
     if (reportType === 'income') {
-    const headers = [['Member ID', 'Name', 'Phone', 'Seat', 'Start', 'End', 'Duration', 'Amount', 'Status', 'Payments']];
+    const headers = [['Member ID', 'Name', 'Phone', 'Location', 'Seat', 'Start', 'End', 'Duration', 'Amount', 'Status', 'Payments']];
     const data = filteredSubscriptions.map(sub => [
       sub.member.memberId,
       sub.member.name,
       sub.member.phone,
+      sub.location?.name || 'N/A',
       sub.seat.seatNumber,
       format(new Date(sub.startDate), 'dd/MM/yyyy'),
       format(new Date(sub.endDate), 'dd/MM/yyyy'),
@@ -307,14 +322,15 @@ export default function Reports() {
       head: headers,
       body: data,
       styles: { fontSize: 8 },
-      columnStyles: { 9: { overflow: 'linebreak', cellWidth: 50 } },
+      columnStyles: { 10: { overflow: 'linebreak', cellWidth: 50 } },
     });
     doc.save('Income_Report.pdf');
     } else {
-      const headers = [['Description', 'Category', 'Paid To', 'Date', 'Amount', 'Method']];
+      const headers = [['Description', 'Category', 'Location', 'Paid To', 'Date', 'Amount', 'Method']];
       const data = filteredExpenses.map(exp => [
         exp.description,
         exp.category,
+        exp.location?.name || 'N/A',
         exp.paidTo,
         format(new Date(exp.date), 'dd/MM/yyyy'),
         exp.amount,

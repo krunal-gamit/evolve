@@ -10,6 +10,8 @@ import autoTable from 'jspdf-autotable';
 import ConfirmationModal from './ConfirmationModal';
 import { Toaster, toast } from 'react-hot-toast';
 
+import { useSession } from 'next-auth/react';
+
 interface Expense {
   _id: string;
   description: string;
@@ -18,12 +20,22 @@ interface Expense {
   paidTo: string;
   method: string;
   date: string;
+  location?: { _id: string; name: string };
   createdAt: string;
 }
 
+interface Location {
+  _id: string;
+  name: string;
+  address: string;
+}
+
 export default function ExpenseManagement() {
+  const { data: session } = useSession();
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [form, setForm] = useState({ description: '', amount: '', category: 'Equipment', paidTo: '', method: 'Cash', date: format(new Date(), 'yyyy-MM-dd') });
+  const [locations, setLocations] = useState<Location[]>([]);
+  const managerLocations = session?.user.locations as string[] | undefined;
+  const [form, setForm] = useState({ description: '', amount: '', category: 'Equipment', paidTo: '', method: 'Cash', date: format(new Date(), 'yyyy-MM-dd'), location: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -44,7 +56,14 @@ export default function ExpenseManagement() {
 
   useEffect(() => {
     fetchExpenses();
+    fetchLocations();
   }, []);
+
+  const fetchLocations = async () => {
+    const res = await fetch('/api/locations');
+    const data = await res.json();
+    setLocations(data);
+  };
 
   const handleEdit = (expense: Expense) => {
     setForm({
@@ -53,7 +72,8 @@ export default function ExpenseManagement() {
       category: expense.category,
       paidTo: expense.paidTo,
       method: expense.method,
-      date: format(new Date(expense.date), 'yyyy-MM-dd')
+      date: format(new Date(expense.date), 'yyyy-MM-dd'),
+      location: expense.location?._id || ''
     });
     setEditingId(expense._id);
     setErrors({});
@@ -61,7 +81,9 @@ export default function ExpenseManagement() {
   };
 
   const handleAdd = () => {
-    setForm({ description: '', amount: '', category: 'Equipment', paidTo: '', method: 'Cash', date: format(new Date(), 'yyyy-MM-dd') });
+    // Set default location for managers with single location
+    const defaultLocation = (managerLocations && managerLocations.length === 1) ? managerLocations[0] : '';
+    setForm({ description: '', amount: '', category: 'Equipment', paidTo: '', method: 'Cash', date: format(new Date(), 'yyyy-MM-dd'), location: defaultLocation });
     setEditingId(null);
     setShowModal(true);
   };
@@ -95,6 +117,7 @@ export default function ExpenseManagement() {
     }
     if (name === 'paidTo' && !value.trim()) error = 'Paid To is required';
     if (name === 'date' && !value) error = 'Date is required';
+    if (name === 'location' && !value) error = 'Location is required';
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
@@ -105,7 +128,8 @@ export default function ExpenseManagement() {
   };
 
   const handleCancel = () => {
-    setForm({ description: '', amount: '', category: 'Equipment', paidTo: '', method: 'Cash', date: format(new Date(), 'yyyy-MM-dd') });
+    const defaultLocation = (managerLocations && managerLocations.length === 1) ? managerLocations[0] : '';
+    setForm({ description: '', amount: '', category: 'Equipment', paidTo: '', method: 'Cash', date: format(new Date(), 'yyyy-MM-dd'), location: defaultLocation });
     setEditingId(null);
     setErrors({});
     setShowModal(false);
@@ -113,6 +137,10 @@ export default function ExpenseManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.location) {
+      toast.error('Please select a location');
+      return;
+    }
     const url = editingId ? `/api/expenses/${editingId}` : '/api/expenses';
     const method = editingId ? 'PUT' : 'POST';
     const res = await fetch(url, {
@@ -121,7 +149,8 @@ export default function ExpenseManagement() {
       body: JSON.stringify({ ...form, amount: Number(form.amount) }),
     });
     if (res.ok) {
-      setForm({ description: '', amount: '', category: 'Equipment', paidTo: '', method: 'Cash', date: format(new Date(), 'yyyy-MM-dd') });
+      const defaultLocation = (managerLocations && managerLocations.length === 1) ? managerLocations[0] : '';
+      setForm({ description: '', amount: '', category: 'Equipment', paidTo: '', method: 'Cash', date: format(new Date(), 'yyyy-MM-dd'), location: defaultLocation });
       setEditingId(null);
       setShowModal(false);
       toast.success(`Expense ${editingId ? 'updated' : 'added'} successfully!`);
@@ -153,6 +182,7 @@ export default function ExpenseManagement() {
       Description: expense.description,
       Amount: expense.amount,
       Category: expense.category,
+      Location: expense.location?.name || 'N/A',
       'Paid To': expense.paidTo,
       Method: expense.method,
       Date: new Date(expense.date).toISOString().split('T')[0],
@@ -170,9 +200,9 @@ export default function ExpenseManagement() {
 
   const exportToPDF = () => {
     const doc = new jsPDF('l', 'mm', 'a4');
-    const headers = [['Description', 'Amount', 'Category', 'Paid To', 'Method', 'Date', 'Recorded']];
+    const headers = [['Description', 'Amount', 'Category', 'Location', 'Paid To', 'Method', 'Date', 'Recorded']];
     const data = expenses.map(expense => [
-      expense.description, expense.amount.toString(), expense.category, expense.paidTo, expense.method,
+      expense.description, expense.amount.toString(), expense.category, expense.location?.name || 'N/A', expense.paidTo, expense.method,
       new Date(expense.date).toLocaleDateString('en-GB'),
       new Date(expense.createdAt).toLocaleDateString('en-GB')
     ]);
@@ -299,6 +329,11 @@ export default function ExpenseManagement() {
     { accessorKey: 'category', header: 'Category' },
     { accessorKey: 'paidTo', header: 'Paid To' },
     { accessorKey: 'method', header: 'Method' },
+    { 
+      accessorKey: 'location', 
+      header: 'Location',
+      cell: ({ row }) => row.original.location?.name || '-'
+    },
     { accessorKey: 'date', header: 'Date', cell: ({ getValue }) => new Date(getValue<string>()).toLocaleDateString('en-GB') },
     {
       id: 'actions',
@@ -511,6 +546,24 @@ export default function ExpenseManagement() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Location</label>
+                <select
+                  name="location"
+                  value={form.location}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${errors.location ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                >
+                  <option value="">Select Location</option>
+                  {(managerLocations && managerLocations.length > 0 
+                    ? locations.filter(loc => managerLocations.includes(loc._id))
+                    : locations
+                  ).map(loc => (
+                    <option key={loc._id} value={loc._id}>{loc.name}</option>
+                  ))}
+                </select>
+                {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
                 <input

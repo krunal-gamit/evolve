@@ -14,7 +14,20 @@ export async function GET() {
 
   await dbConnect();
 
-  const expenses = await Expense.find().sort({ date: -1 });
+  // If user is a Manager with specific location assignments, restrict to those locations
+  let managerLocations: string[] = [];
+  if (session?.user?.role === 'Manager' && session.user.locations) {
+    managerLocations = session.user.locations;
+  }
+
+  const filter: any = {};
+  
+  // Managers with location assignments can only see expenses at those locations
+  if (managerLocations.length > 0) {
+    filter.location = { $in: managerLocations };
+  }
+
+  const expenses = await Expense.find(filter).populate('location', 'name').sort({ date: -1 });
 
   return NextResponse.json(expenses);
 
@@ -26,13 +39,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  // If user is a Manager with specific location assignments, validate the location
+  let managerLocations: string[] = [];
+  if (session?.user?.role === 'Manager' && session.user.locations) {
+    managerLocations = session.user.locations;
+  }
+
   try {
     await dbConnect();
 
     const body = await request.json();
 
     if (Array.isArray(body)) {
-      // Bulk insert
+      // Bulk insert - validate all expenses have valid location
+      for (const exp of body) {
+        if (!exp.location) {
+          return NextResponse.json({ error: 'Location is required for each expense' }, { status: 400 });
+        }
+        // Managers can only create expenses for their assigned locations
+        if (managerLocations.length > 0 && !managerLocations.includes(exp.location)) {
+          return NextResponse.json({ error: 'You can only create expenses for your assigned locations' }, { status: 403 });
+        }
+      }
+      
       const expenses = body.map(exp => new Expense(exp));
       const savedExpenses = await Expense.insertMany(expenses);
 
@@ -49,9 +78,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(savedExpenses);
     } else {
       // Single insert
-      const { description, amount, category, paidTo, method, date } = body;
+      const { description, amount, category, paidTo, method, date, location } = body;
 
-      const expense = new Expense({ description, amount, category, paidTo, method, date });
+      if (!location) {
+        return NextResponse.json({ error: 'Location is required' }, { status: 400 });
+      }
+
+      // Managers can only create expenses for their assigned locations
+      if (managerLocations.length > 0 && !managerLocations.includes(location)) {
+        return NextResponse.json({ error: 'You can only create expenses for your assigned locations' }, { status: 403 });
+      }
+
+      const expense = new Expense({ description, amount, category, paidTo, method, date, location });
 
       await expense.save();
 

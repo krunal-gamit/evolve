@@ -16,6 +16,8 @@ export default function Dashboard() {
   const router = useRouter();
 
   const isMember = session?.user.role === 'Member';
+  const isAdmin = session?.user.role === 'Admin';
+  const managerLocations = session?.user.locations as string[] | undefined;
 
   const [members, setMembers] = useState<any[]>([]);
   const [seats, setSeats] = useState<any[]>([]);
@@ -26,6 +28,7 @@ export default function Dashboard() {
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [filterType, setFilterType] = useState<'total' | 'thisMonth' | 'previousMonth'>('total');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [isLocationLocked, setIsLocationLocked] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return; // Still loading
@@ -63,6 +66,15 @@ export default function Dashboard() {
         setSubscriptions(Array.isArray(subs) ? subs : []);
         setLocations(locs || []);
         setExpenses(exp);
+        
+        // Auto-select location for managers with single specific location (not for all locations)
+        if (managerLocations && managerLocations.length > 0 && managerLocations.length < locations.length) {
+          if (managerLocations.length === 1) {
+            setSelectedLocation(managerLocations[0]);
+          }
+          setIsLocationLocked(true);
+        }
+        
         // Extract and sort payments
         const allPayments = (Array.isArray(subs) ? subs : []).flatMap((sub: any) =>
           (sub.payments || []).map((p: any) => ({ ...p, memberName: sub.member?.name || 'Unknown Member' }))
@@ -73,7 +85,7 @@ export default function Dashboard() {
       }
     };
     if (session) fetchData();
-  }, [session]);
+  }, [session, managerLocations]);
 
   useEffect(() => {
     if (filterType === 'previousMonth' && !selectedMonth) {
@@ -95,6 +107,16 @@ export default function Dashboard() {
     return seats.filter((seat: any) => seat.location?._id === selectedLocation || seat.location === selectedLocation);
   }, [seats, selectedLocation]);
 
+  // Filter members by selected location (based on their subscriptions)
+  const filteredMembers = useMemo(() => {
+    if (!selectedLocation) return members;
+    // Members who have subscriptions at the selected location
+    const memberIdsAtLocation = subscriptions
+      .filter((sub: any) => sub.location?._id === selectedLocation || sub.location === selectedLocation)
+      .map((sub: any) => sub.member?._id || sub.member);
+    return members.filter((m: any) => memberIdsAtLocation.includes(m._id));
+  }, [members, subscriptions, selectedLocation]);
+
   const filteredTotalSeats = filteredSeats.length;
   const filteredOccupiedSeats = filteredSeats.filter((seat: any) => seat.status === 'occupied').length;
   const filteredOccupancyRate = filteredTotalSeats > 0 ? ((filteredOccupiedSeats / filteredTotalSeats) * 100).toFixed(1) : '0.0';
@@ -102,19 +124,38 @@ export default function Dashboard() {
   // Filtered Data based on selection
   const { filteredPayments, filteredExpenses } = useMemo(() => {
     const currentMonth = new Date().toLocaleDateString('en-CA').slice(0, 7);
+    
+    // Filter payments by location
+    let locationFilteredPayments = payments;
+    if (selectedLocation) {
+      locationFilteredPayments = payments.filter((p: any) => {
+        // Need to check if payment belongs to subscription at selected location
+        const sub = subscriptions.find((s: any) => s.payments?.some((pay: any) => pay._id === p._id));
+        return sub?.location?._id === selectedLocation || sub?.location === selectedLocation;
+      });
+    }
+    
+    // Filter expenses by location
+    let locationFilteredExpenses = expenses;
+    if (selectedLocation) {
+      locationFilteredExpenses = expenses.filter((e: any) => 
+        e.location?._id === selectedLocation || e.location === selectedLocation
+      );
+    }
+    
     if (filterType === 'thisMonth') {
       return {
-        filteredPayments: payments.filter(p => new Date(p.dateTime).toLocaleDateString('en-CA').slice(0, 7) === currentMonth),
-        filteredExpenses: expenses.filter(e => new Date(e.date).toLocaleDateString('en-CA').slice(0, 7) === currentMonth)
+        filteredPayments: locationFilteredPayments.filter(p => new Date(p.dateTime).toLocaleDateString('en-CA').slice(0, 7) === currentMonth),
+        filteredExpenses: locationFilteredExpenses.filter(e => new Date(e.date).toLocaleDateString('en-CA').slice(0, 7) === currentMonth)
       };
     } else if (filterType === 'previousMonth' && selectedMonth) {
       return {
-        filteredPayments: payments.filter(p => new Date(p.dateTime).toLocaleDateString('en-CA').slice(0, 7) === selectedMonth),
-        filteredExpenses: expenses.filter(e => new Date(e.date).toLocaleDateString('en-CA').slice(0, 7) === selectedMonth)
+        filteredPayments: locationFilteredPayments.filter(p => new Date(p.dateTime).toLocaleDateString('en-CA').slice(0, 7) === selectedMonth),
+        filteredExpenses: locationFilteredExpenses.filter(e => new Date(e.date).toLocaleDateString('en-CA').slice(0, 7) === selectedMonth)
       };
     }
-    return { filteredPayments: payments, filteredExpenses: expenses };
-  }, [payments, expenses, filterType, selectedMonth]);
+    return { filteredPayments: locationFilteredPayments, filteredExpenses: locationFilteredExpenses };
+  }, [payments, expenses, subscriptions, filterType, selectedMonth, selectedLocation]);
 
   // Previous months options
   const previousMonthsOptions = useMemo(() => {
@@ -143,11 +184,26 @@ export default function Dashboard() {
       months.push(d.toISOString().slice(0, 7));
     }
     return months.map(month => {
-      const rev = payments.filter(p => new Date(p.dateTime).toISOString().slice(0, 7) === month).reduce((sum, p) => sum + p.amount, 0);
-      const exp = expenses.filter(e => new Date(e.date).toISOString().slice(0, 7) === month).reduce((sum, e) => sum + e.amount, 0);
+      // Filter payments by location first
+      let locationFilteredPayments = payments;
+      if (selectedLocation) {
+        locationFilteredPayments = payments.filter((p: any) => {
+          const sub = subscriptions.find((s: any) => s.payments?.some((pay: any) => pay._id === p._id));
+          return sub?.location?._id === selectedLocation || sub?.location === selectedLocation;
+        });
+      }
+      // Filter expenses by location first
+      let locationFilteredExpenses = expenses;
+      if (selectedLocation) {
+        locationFilteredExpenses = expenses.filter((e: any) => 
+          e.location?._id === selectedLocation || e.location === selectedLocation
+        );
+      }
+      const rev = locationFilteredPayments.filter(p => new Date(p.dateTime).toISOString().slice(0, 7) === month).reduce((sum, p) => sum + p.amount, 0);
+      const exp = locationFilteredExpenses.filter(e => new Date(e.date).toISOString().slice(0, 7) === month).reduce((sum, e) => sum + e.amount, 0);
       return { month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short' }), revenue: rev, expenses: exp };
     });
-  }, [payments, expenses]);
+  }, [payments, expenses, subscriptions, selectedLocation]);
 
   // Expense Categories Data
   const expenseCategoryData = useMemo(() => {
@@ -189,11 +245,11 @@ export default function Dashboard() {
 
   // Exam preparation distribution
   const examCounts: {[key: string]: number} = {};
-  members.forEach(m => {
+  filteredMembers.forEach(m => {
     const prep = m.examPrep || 'Other';
     examCounts[prep] = (examCounts[prep] || 0) + 1;
   });
-  const totalExams = members.length;
+  const totalExams = filteredMembers.length;
   const examData = Object.entries(examCounts).map(([prep, count]: [string, number]) => ({
     prep,
     percentage: totalExams > 0 ? Math.round((count / totalExams) * 100) : 0
@@ -240,18 +296,6 @@ export default function Dashboard() {
             <div className="ios-card-glass p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-semibold text-gray-900">Occupancy</h2>
-                {locations.length > 1 && (
-                  <select
-                    value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
-                    className="ios-select text-xs"
-                  >
-                    <option value="">All Locations</option>
-                    {locations.map((loc: any) => (
-                      <option key={loc._id} value={loc._id}>{loc.name}</option>
-                    ))}
-                  </select>
-                )}
               </div>
               {!selectedLocation ? (
                 // Show all locations grouped
@@ -313,7 +357,23 @@ export default function Dashboard() {
                 <h2 className="text-lg font-semibold text-gray-800">Overview</h2>
                 <p className="text-gray-500 text-xs mt-0.5">Track your reading room.</p>
               </div>
-              <div className="flex items-center glass rounded-xl p-1">
+              <div className="flex items-center gap-3">
+                {/* Location Filter - Shows all locations for admins, and for managers with all locations or multiple specific locations */}
+              {!isMember && locations.length > 1 && (isAdmin || !managerLocations || managerLocations.length === 0 || managerLocations.length > 1) && (
+                  <select
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Locations</option>
+                    {locations
+                      .filter((loc: any) => isAdmin || !managerLocations || managerLocations.length === 0 || managerLocations.includes(loc._id))
+                      .map((loc: any) => (
+                        <option key={loc._id} value={loc._id}>{loc.name}</option>
+                    ))}
+                  </select>
+                )}
+                <div className="flex items-center glass rounded-xl p-1">
               <button
                 onClick={() => setFilterType('total')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'total' ? 'bg-[#007AFF] text-white' : 'text-gray-600 hover:bg-white/50'}`}
@@ -348,6 +408,7 @@ export default function Dashboard() {
                 </svg>
               </div>
               </div>
+              </div>
             </div>
 
             {/* Cards - iOS Style with Glassmorphism */}
@@ -370,8 +431,8 @@ export default function Dashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-xs font-medium text-gray-500">Occupancy</p>
-                <h3 className="text-lg font-bold text-gray-900 mt-1">{occupancyRate}%</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{occupiedSeats}/{totalSeats}</p>
+                <h3 className="text-lg font-bold text-gray-900 mt-1">{filteredOccupancyRate}%</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{filteredOccupiedSeats}/{filteredTotalSeats}</p>
               </div>
               <div className="p-2 bg-blue-100/70 rounded-lg">
                 <Activity className="h-4 w-4 text-blue-600" />
@@ -445,18 +506,6 @@ export default function Dashboard() {
           <div className="ios-card-glass p-4 flex flex-col overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-gray-900">Occupancy</h2>
-              {locations.length > 1 && (
-                <select
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="ios-select text-xs py-1"
-                >
-                  <option value="">All Locations</option>
-                  {locations.map((loc: any) => (
-                    <option key={loc._id} value={loc._id}>{loc.name}</option>
-                  ))}
-                </select>
-              )}
             </div>
             {!selectedLocation ? (
               // Show all locations grouped
@@ -543,6 +592,7 @@ export default function Dashboard() {
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Latest Subscriptions</h2>
             <div className="flex-1 overflow-auto">
               {subscriptions
+                .filter((sub: any) => !selectedLocation || sub.location?._id === selectedLocation || sub.location === selectedLocation)
                 .sort((a: any, b: any) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
                 .slice(0, 5)
                 .map((sub: any) => (
@@ -564,7 +614,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ))}
-              {subscriptions.length === 0 && (
+              {subscriptions.filter((sub: any) => !selectedLocation || sub.location?._id === selectedLocation || sub.location === selectedLocation).length === 0 && (
                 <p className="text-xs text-gray-500 text-center py-4">No subscriptions yet</p>
               )}
             </div>
