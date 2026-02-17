@@ -45,7 +45,7 @@ export const authOptions = {
             name: user.name,
             role: user.role,
             qrCode: user.qrCode || undefined,
-            locations: user.locations || [],
+            locations: user.locations?.map((loc: any) => loc.toString()) || [],
           };
         } catch (error) {
           console.error('Auth error:', error);
