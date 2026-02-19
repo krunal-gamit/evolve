@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Users, CreditCard, BarChart3, MapPin, IndianRupee, BookOpen, User, UserCheck, ClipboardList, Settings, Calendar } from 'lucide-react';
+import { Home, Users, CreditCard, BarChart3, MapPin, IndianRupee, BookOpen, User, UserCheck, ClipboardList, Settings, Calendar, Search } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 

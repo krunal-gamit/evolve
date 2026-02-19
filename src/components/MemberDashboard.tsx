@@ -5,7 +5,8 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Bell, MapPin } from 'lucide-react';
+import QRCodeModal from './QRCodeModal';
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Bell, MapPin, IdCard } from 'lucide-react';
 
 interface Subscription {
   _id: string;
@@ -34,6 +35,7 @@ interface Member {
   phone: string;
   address: string;
   examPrep?: string;
+  qrCode?: string;
 }
 
 interface Seat {
@@ -57,6 +59,7 @@ export default function MemberDashboard() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -169,14 +172,25 @@ export default function MemberDashboard() {
           <div className="p-6">
             {/* Welcome Section - Compact */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-4 mb-4 text-white">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <User className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-bold">Welcome back, {member?.name || session.user.name || 'Member'}!</h1>
+                    <p className="text-blue-100 text-xs">Member ID: {member?.memberId || session.user.id || 'N/A'}</p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-lg font-bold">Welcome back, {member?.name || session.user.name || 'Member'}!</h1>
-                  <p className="text-blue-100 text-xs">Member ID: {member?.memberId || session.user.id || 'N/A'}</p>
-                </div>
+                {member && (
+                  <button
+                    onClick={() => setShowQRModal(true)}
+                    className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    <IdCard className="w-5 h-5" />
+                    <span className="text-sm font-medium">View ID Card</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -323,6 +337,13 @@ export default function MemberDashboard() {
           </div>
         </main>
       </div>
+
+      {/* QR Code Modal */}
+      <QRCodeModal 
+        isOpen={showQRModal} 
+        onClose={() => setShowQRModal(false)} 
+        member={member} 
+      />
     </div>
   );
 }

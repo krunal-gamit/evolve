@@ -102,7 +102,16 @@ export async function POST(request: NextRequest) {
     // Create user account for member with default password
     const defaultPassword = 'password123'; // TODO: Send email to set password
     const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-    const qrCodeData = `Member ID: ${memberId}\nName: ${name}\nEmail: ${email}`;
+    
+    // Generate QR code with verification URL containing memberId
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const verifyUrl = `${appUrl}/api/verify?memberId=${finalMemberId}`;
+    const qrCodeData = JSON.stringify({
+      memberId: finalMemberId,
+      name,
+      email,
+      verifyUrl
+    });
     const qrCode = await qrcode.toDataURL(qrCodeData);
 
     const user = new User({

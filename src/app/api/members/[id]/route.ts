@@ -57,7 +57,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'Member not found' }, { status: 404 });
   }
 
-  return NextResponse.json(member);
+  // Get QR code from User model
+  const user = await User.findOne({ email: member.email });
+  const qrCode = user?.qrCode || null;
+
+  // Return member data with QR code
+  return NextResponse.json({
+    ...member.toObject(),
+    qrCode
+  });
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

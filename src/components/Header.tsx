@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Toaster, toast } from 'react-hot-toast';
-import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck, CreditCard, Settings, ClipboardList, Calendar } from 'lucide-react';
+import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck, CreditCard, Settings, ClipboardList, Calendar, Search, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 
 interface HeaderProps {
@@ -16,12 +16,46 @@ export default function Header({ pageTitle }: HeaderProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', examPrep: '' });
   const [showModal, setShowModal] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyMemberId, setVerifyMemberId] = useState('');
+  const [verifyResult, setVerifyResult] = useState<any>(null);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const notificationRef = useRef<HTMLDivElement>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleVerify = async () => {
+    if (!verifyMemberId.trim()) {
+      setVerifyError('Please enter a Member ID');
+      return;
+    }
+    setVerifyLoading(true);
+    setVerifyError('');
+    setVerifyResult(null);
+    try {
+      const response = await fetch(`/api/verify?memberId=${encodeURIComponent(verifyMemberId.trim())}`);
+      const data = await response.json();
+      if (response.ok) {
+        setVerifyResult(data);
+      } else {
+        setVerifyError(data.error || 'Failed to verify member');
+      }
+    } catch {
+      setVerifyError('Network error. Please try again.');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const resetVerifyModal = () => {
+    setVerifyMemberId('');
+    setVerifyResult(null);
+    setVerifyError('');
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -132,6 +166,9 @@ export default function Header({ pageTitle }: HeaderProps) {
           {!isMember && <button onClick={() => setShowModal(true)} className="hidden sm:flex items-center px-3 py-1.5 bg-[#007AFF] text-white rounded-lg hover:bg-[#0066CC] transition-all duration-200 text-sm font-medium">
             <UserPlus size={14} className="mr-1.5" />
             <span className="hidden md:inline">Add</span>
+          </button>}
+          {!isMember && <button onClick={() => setShowVerifyModal(true)} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" title="Verify Member">
+            <Search size={16} className="text-gray-600" />
           </button>}
           <div className="relative" ref={notificationRef}>
             <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="p-1.5 rounded-full hover:bg-gray-100 relative transition-colors">
@@ -346,6 +383,125 @@ export default function Header({ pageTitle }: HeaderProps) {
                 </button>
               </div>
             </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showVerifyModal && (
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-card max-w-md w-full shadow-2xl min-h-[320px] rounded-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Search size={18} className="text-white" />
+                <h3 className="text-base font-semibold text-white">Verify Member</h3>
+              </div>
+              <button onClick={() => { setShowVerifyModal(false); resetVerifyModal(); }} className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/20">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              {/* Search Input */}
+              <div className="flex gap-2 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={verifyMemberId}
+                    onChange={(e) => setVerifyMemberId(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+                    placeholder="Enter Member ID (e.g., EVOLVE202602001)"
+                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                    autoFocus
+                  />
+                </div>
+                <button onClick={handleVerify} disabled={verifyLoading} className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 text-sm font-medium disabled:opacity-50 shadow-md">
+                  {verifyLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : 'Verify'}
+                </button>
+              </div>
+
+              {verifyError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 mb-4">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <p className="text-xs text-red-700">{verifyError}</p>
+                </div>
+              )}
+
+              {verifyResult && (
+                <div className={`rounded-xl overflow-hidden border-2 ${verifyResult.valid ? 'border-green-200' : 'border-red-200'}`}>
+                  {/* Status Header */}
+                  <div className={`px-4 py-3 ${verifyResult.valid ? 'bg-green-500' : 'bg-red-500'} flex items-center gap-2`}>
+                    {verifyResult.valid ? <CheckCircle className="w-5 h-5 text-white" /> : <XCircle className="w-5 h-5 text-white" />}
+                    <span className="text-white font-medium">{verifyResult.valid ? 'Valid Subscription' : verifyResult.message}</span>
+                  </div>
+                  
+                  {verifyResult.member && (
+                    <div className="bg-white p-4 space-y-4">
+                      {/* Member Info */}
+                      <div>
+                        <p className="text-[10px] uppercase text-gray-400 font-semibold tracking-wider mb-2">Member Information</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-gray-50 p-2 rounded-lg">
+                            <p className="text-[10px] text-gray-500">Name</p>
+                            <p className="text-sm font-semibold text-gray-900">{verifyResult.member.name}</p>
+                          </div>
+                          <div className="bg-gray-50 p-2 rounded-lg">
+                            <p className="text-[10px] text-gray-500">Member ID</p>
+                            <p className="text-sm font-mono font-semibold text-gray-900">{verifyResult.member.memberId}</p>
+                          </div>
+                          <div className="bg-gray-50 p-2 rounded-lg">
+                            <p className="text-[10px] text-gray-500">Phone</p>
+                            <p className="text-xs text-gray-900">{verifyResult.member.phone}</p>
+                          </div>
+                          <div className="bg-gray-50 p-2 rounded-lg">
+                            <p className="text-[10px] text-gray-500">Email</p>
+                            <p className="text-xs text-gray-900 truncate">{verifyResult.member.email}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Subscription Info */}
+                      {verifyResult.subscription && (
+                        <div>
+                          <p className="text-[10px] uppercase text-gray-400 font-semibold tracking-wider mb-2">Subscription Details</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-gray-50 p-2 rounded-lg">
+                              <p className="text-[10px] text-gray-500">Status</p>
+                              <p className={`text-xs font-semibold ${verifyResult.subscription.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                                {verifyResult.subscription.status.charAt(0).toUpperCase() + verifyResult.subscription.status.slice(1)}
+                              </p>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded-lg">
+                              <p className="text-[10px] text-gray-500">Location</p>
+                              <p className="text-xs font-medium text-gray-900 truncate">{verifyResult.subscription.location?.name || 'N/A'}</p>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded-lg">
+                              <p className="text-[10px] text-gray-500">Seat</p>
+                              <p className="text-xs font-medium text-gray-900">Seat {verifyResult.subscription.seat?.seatNumber || 'N/A'}</p>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded-lg">
+                              <p className="text-[10px] text-gray-500">Duration</p>
+                              <p className="text-xs font-medium text-gray-900">{verifyResult.subscription.duration}</p>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded-lg">
+                              <p className="text-[10px] text-gray-500">Amount</p>
+                              <p className="text-xs font-bold text-gray-900">₹{verifyResult.subscription.totalAmount?.toLocaleString('en-IN')}</p>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded-lg">
+                              <p className="text-[10px] text-gray-500">End Date</p>
+                              <p className={`text-xs font-medium ${verifyResult.valid ? 'text-green-600' : 'text-red-600'}`}>
+                                {new Date(verifyResult.subscription.endDate).toLocaleDateString('en-IN')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

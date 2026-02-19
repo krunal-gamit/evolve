@@ -8,6 +8,7 @@ import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ConfirmationModal from './ConfirmationModal';
+import QRCodeModal from './QRCodeModal';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
 
@@ -42,6 +43,8 @@ export default function MemberManagement() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -58,6 +61,30 @@ export default function MemberManagement() {
     const data = await res.json();
     data.sort((a: Member, b: Member) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setMembers(data);
+  };
+
+  const fetchMemberQR = async (memberId: string) => {
+    try {
+      const res = await fetch(`/api/members/${memberId}`);
+      if (res.ok) {
+        const data = await res.json();
+        return data;
+      }
+    } catch (error) {
+      console.error('Error fetching member QR:', error);
+    }
+    return null;
+  };
+
+  const handleViewQR = async (member: Member) => {
+    const memberWithQR = await fetchMemberQR(member._id);
+    if (memberWithQR) {
+      setSelectedMember(memberWithQR);
+      setShowQRModal(true);
+    } else {
+      setSelectedMember(member);
+      setShowQRModal(true);
+    }
   };
 
   useEffect(() => {
@@ -369,6 +396,12 @@ export default function MemberManagement() {
       enableSorting: false,
       cell: ({ row }) => isMember ? null : (
         <div className="flex items-center">
+            <button onClick={() => handleViewQR(row.original)} className="text-green-600 hover:text-green-900 mr-4 transition-colors" title="View ID Card">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </button>
             <button onClick={() => handleEdit(row.original)} className="text-blue-600 hover:text-blue-900 mr-4 transition-colors" title="Edit">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -684,6 +717,13 @@ export default function MemberManagement() {
           </div>
         </div>
       )}
+
+      {/* QR Code Modal */}
+      <QRCodeModal
+        isOpen={showQRModal}
+        onClose={() => { setShowQRModal(false); setSelectedMember(null); }}
+        member={selectedMember}
+      />
     </div>
   );
 }
