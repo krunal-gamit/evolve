@@ -123,23 +123,23 @@ export default function SettingsPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header pageTitle="Settings" />
         
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-full mx-auto space-y-6">
+        <main className="flex-1 overflow-y-auto p-3 md:p-4 sm:p-6 lg:p-8">
+          <div className="max-w-full mx-auto space-y-4 md:space-y-6">
             
             {/* Tab Navigation */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2">
-              <nav className="flex flex-wrap gap-2">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1.5 md:p-2">
+              <nav className="flex flex-wrap gap-1.5 md:gap-2">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all ${
                       activeTab === tab.id
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
-                    <tab.icon className="w-4 h-4" />
+                    <tab.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
                     {tab.label}
                   </button>
                 ))}

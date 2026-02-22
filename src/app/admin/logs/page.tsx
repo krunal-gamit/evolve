@@ -100,17 +100,17 @@ export default function LogsPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header pageTitle="System Logs" />
         
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
+        <main className="flex-1 overflow-y-auto">
+          <div className="w-full space-y-4 md:space-y-6 p-3 md:p-4 lg:p-6">
             
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-4 bg-white p-3 md:p-5 rounded-xl shadow-sm border border-gray-100">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-blue-600" />
+                <h2 className="text-base md:text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Activity className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                   Audit Trail
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">View and export system activity logs.</p>
+                <p className="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1">View and export system activity logs.</p>
               </div>
               <button
                 onClick={downloadLogs}

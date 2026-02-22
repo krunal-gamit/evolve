@@ -182,10 +182,10 @@ export default function SeatsPage() {
             scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
           }
         `}</style>
-        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7] p-4">
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7] p-3 md:p-4">
           {showLoading ? null : (
             <>
-            <div className="flex justify-end mb-6 gap-4 mt-4">
+            <div className="flex justify-end mb-4 md:mb-6 gap-3 md:gap-4 mt-3 md:mt-4">
             {locations.length > 0 && !isLocationLocked && (
               <select
                 value={selectedLocation}

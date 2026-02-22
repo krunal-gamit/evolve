@@ -352,18 +352,18 @@ export default function Dashboard() {
         ) : (
           <>
             {/* Header Section - iOS Style */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 md:mb-6 gap-3 md:gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-800">Overview</h2>
-                <p className="text-gray-500 text-xs mt-0.5">Track your reading room.</p>
+                <h2 className="text-base md:text-lg font-semibold text-gray-800">Overview</h2>
+                <p className="text-gray-500 text-[10px] md:text-xs mt-0.5">Track your reading room.</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 {/* Location Filter - Shows all locations for admins, and for managers with all locations or multiple specific locations */}
               {!isMember && locations.length > 1 && (isAdmin || !managerLocations || managerLocations.length === 0 || managerLocations.length > 1) && (
                   <select
                     value={selectedLocation}
                     onChange={(e) => setSelectedLocation(e.target.value)}
-                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
                   >
                     <option value="">All Locations</option>
                     {locations
@@ -373,16 +373,16 @@ export default function Dashboard() {
                     ))}
                   </select>
                 )}
-                <div className="flex items-center glass rounded-xl p-1">
+                <div className="flex items-center glass rounded-xl p-1 w-full sm:w-auto overflow-x-auto">
               <button
                 onClick={() => setFilterType('total')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'total' ? 'bg-[#007AFF] text-white' : 'text-gray-600 hover:bg-white/50'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterType === 'total' ? 'bg-[#007AFF] text-white' : 'text-gray-600 hover:bg-white/50'}`}
               >
                 Total
               </button>
               <button
                 onClick={() => setFilterType('thisMonth')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterType === 'thisMonth' ? 'bg-[#007AFF] text-white' : 'text-gray-600 hover:bg-white/50'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${filterType === 'thisMonth' ? 'bg-[#007AFF] text-white' : 'text-gray-600 hover:bg-white/50'}`}
               >
                 This Month
               </button>
@@ -396,7 +396,7 @@ export default function Dashboard() {
                   style={{ 
                     color: filterType === 'previousMonth' && selectedMonth ? '#1f2937' : '#4b5563'
                   }}
-                  className="px-3 py-1.5 pr-6 rounded-lg text-xs font-medium transition-all outline-none cursor-pointer appearance-none bg-transparent"
+                  className="px-3 py-1.5 pr-6 rounded-lg text-xs font-medium transition-all outline-none cursor-pointer appearance-none bg-transparent whitespace-nowrap"
                 >
                   <option value="" disabled style={{ color: '#6b7280' }}>Previous</option>
                   {previousMonthsOptions.map(option => (
@@ -412,71 +412,71 @@ export default function Dashboard() {
             </div>
 
             {/* Cards - iOS Style with Glassmorphism */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-6">
           {/* Revenue Card */}
-          <div className="ios-card-glass p-4 transition-transform hover:scale-[1.02]">
+          <div className="ios-card-glass p-2 md:p-4 transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-medium text-gray-500">Revenue</p>
-                <h3 className="text-lg font-bold text-gray-900 mt-1">₹{displayRevenue.toLocaleString()}</h3>
+                <p className="text-[10px] md:text-xs font-medium text-gray-500">Revenue</p>
+                <h3 className="text-sm md:text-lg font-bold text-gray-900 mt-0.5 md:mt-1">₹{displayRevenue.toLocaleString()}</h3>
               </div>
-              <div className="p-2 bg-emerald-100/70 rounded-lg">
-                <IndianRupee className="h-4 w-4 text-emerald-600" />
+              <div className="p-1.5 md:p-2 bg-emerald-100/70 rounded-lg">
+                <IndianRupee className="h-3 w-3 md:h-4 md:w-4 text-emerald-600" />
               </div>
             </div>
           </div>
 
           {/* Occupancy Card */}
-          <div className="ios-card-glass p-4 transition-transform hover:scale-[1.02]">
+          <div className="ios-card-glass p-2 md:p-4 transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-medium text-gray-500">Occupancy</p>
-                <h3 className="text-lg font-bold text-gray-900 mt-1">{filteredOccupancyRate}%</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{filteredOccupiedSeats}/{filteredTotalSeats}</p>
+                <p className="text-[10px] md:text-xs font-medium text-gray-500">Occupancy</p>
+                <h3 className="text-sm md:text-lg font-bold text-gray-900 mt-0.5 md:mt-1">{filteredOccupancyRate}%</h3>
+                <p className="text-[9px] md:text-xs text-gray-400 mt-0.5">{filteredOccupiedSeats}/{filteredTotalSeats}</p>
               </div>
-              <div className="p-2 bg-blue-100/70 rounded-lg">
-                <Activity className="h-4 w-4 text-blue-600" />
+              <div className="p-1.5 md:p-2 bg-blue-100/70 rounded-lg">
+                <Activity className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
               </div>
             </div>
           </div>
 
           {/* Expenses Card */}
-          <div className="ios-card-glass p-4 transition-transform hover:scale-[1.02]">
+          <div className="ios-card-glass p-2 md:p-4 transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-medium text-gray-500">Expenses</p>
-                <h3 className="text-lg font-bold text-gray-900 mt-1">₹{displayExpenses.toLocaleString()}</h3>
+                <p className="text-[10px] md:text-xs font-medium text-gray-500">Expenses</p>
+                <h3 className="text-sm md:text-lg font-bold text-gray-900 mt-0.5 md:mt-1">₹{displayExpenses.toLocaleString()}</h3>
               </div>
-              <div className="p-2 bg-rose-100/70 rounded-lg">
-                <CreditCard className="h-4 w-4 text-rose-600" />
+              <div className="p-1.5 md:p-2 bg-rose-100/70 rounded-lg">
+                <CreditCard className="h-3 w-3 md:h-4 md:w-4 text-rose-600" />
               </div>
             </div>
           </div>
 
           {/* Profit Card */}
-          <div className="ios-card-glass p-4 transition-transform hover:scale-[1.02]">
+          <div className="ios-card-glass p-2 md:p-4 transition-transform hover:scale-[1.02]">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-medium text-gray-500">Profit</p>
-                <h3 className="text-lg font-bold text-gray-900 mt-1">₹{displayProfit.toLocaleString()}</h3>
+                <p className="text-[10px] md:text-xs font-medium text-gray-500">Profit</p>
+                <h3 className="text-sm md:text-lg font-bold text-gray-900 mt-0.5 md:mt-1">₹{displayProfit.toLocaleString()}</h3>
               </div>
-              <div className="p-2 bg-amber-100/70 rounded-lg">
-                <Wallet className="h-4 w-4 text-amber-600" />
+              <div className="p-1.5 md:p-2 bg-amber-100/70 rounded-lg">
+                <Wallet className="h-3 w-3 md:h-4 md:w-4 text-amber-600" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4 md:5">
           {/* Revenue & Expenses Chart - Glassmorphism */}
-          <div className="ios-card-glass p-4 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
+          <div className="ios-card-glass p-3 md:p-4 flex flex-col">
+            <div className="flex items-center justify-between mb-2 md:mb-4">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Financial Overview</h2>
-              <p className="text-xs text-gray-500">Last 6 Months</p>
+              <h2 className="text-xs md:text-sm font-semibold text-gray-900">Financial Overview</h2>
+              <p className="text-[10px] md:text-xs text-gray-500">Last 6 Months</p>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -490,7 +490,13 @@ export default function Dashboard() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                width={45}
+                tick={{ fill: '#6b7280', fontSize: 10 }}
+                tickFormatter={(value) => value >= 1000 ? `${(value / 1000)}K` : value}
+              />
               <Tooltip
                 formatter={(value: number | undefined, name: string | undefined) => value !== undefined ? [`₹${value.toLocaleString('en-IN')}`, (name || '').charAt(0).toUpperCase() + (name || '').slice(1)] : ['', '']}
                 contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
@@ -503,9 +509,9 @@ export default function Dashboard() {
           </div>
 
           {/* Occupancy Heatmap - iOS Style Glassmorphism */}
-          <div className="ios-card-glass p-4 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-900">Occupancy</h2>
+          <div className="ios-card-glass p-3 md:p-4 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between mb-2 md:mb-3">
+              <h2 className="text-xs md:text-sm font-semibold text-gray-900">Occupancy</h2>
             </div>
             {!selectedLocation ? (
               // Show all locations grouped

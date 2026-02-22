@@ -67,27 +67,27 @@ export default function NotificationsPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header pageTitle="All Notifications" />
-        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7]">
-          <div className="p-4 sm:p-5">
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-800">All Notifications</h2>
-              <p className="text-gray-500 text-xs mt-0.5">View and manage notifications.</p>
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7] p-3 md:p-4">
+          <div className="p-3 md:p-4 sm:p-5">
+            <div className="mb-4 md:mb-5">
+              <h2 className="text-base md:text-lg font-semibold text-gray-800">All Notifications</h2>
+              <p className="text-gray-500 text-[10px] md:text-xs mt-0.5">View and manage notifications.</p>
             </div>
-            <div className="mb-4">
+            <div className="mb-3 md:mb-4">
               <button
                 onClick={markAllAsRead}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1.5 md:py-2 px-3 md:px-4 rounded text-xs md:text-sm"
               >
                 Mark All as Read
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {notifications.map(notification => (
-                <div key={notification._id} className={`p-4 border rounded-lg ${!notification.read ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
+                <div key={notification._id} className={`p-3 md:p-4 border rounded-lg ${!notification.read ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-semibold text-lg">{notification.title}</h3>
-                      <p className="text-gray-700">{notification.message}</p>
+                      <h3 className="font-semibold text-sm md:text-base">{notification.title}</h3>
+                      <p className="text-gray-700 text-xs md:text-sm">{notification.message}</p>
                       <div className="mt-2 flex items-center gap-4">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           notification.priority === 'high' ? 'bg-red-100 text-red-800' :

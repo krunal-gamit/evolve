@@ -86,7 +86,14 @@ export default function MemberDashboard() {
           console.log('Subscriptions fetched:', subsData);
           setSubscriptions(subsData);
         } else {
-          console.error('Failed to fetch subscriptions');
+          console.error('Failed to fetch subscriptions', subsRes.status, subsRes.statusText);
+          // Try fetching by email as fallback
+          const subsResByEmail = await fetch(`/api/subscriptions/member?email=${encodeURIComponent(session.user.email || '')}`);
+          if (subsResByEmail.ok) {
+            const subsDataByEmail = await subsResByEmail.json();
+            console.log('Subscriptions fetched by email:', subsDataByEmail);
+            setSubscriptions(subsDataByEmail);
+          }
         }
 
         // Fetch seats and locations for heat map

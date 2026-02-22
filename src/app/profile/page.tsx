@@ -83,23 +83,23 @@ export default function ProfilePage() {
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header pageTitle="Profile" />
-        <div className="flex-1 overflow-auto bg-gray-50/50 p-4 sm:p-8">
+        <div className="flex-1 overflow-auto bg-gray-50/50 p-3 md:p-4 sm:p-8">
           <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">Account Settings</h2>
-              <p className="text-gray-500 mt-1">Manage your personal information and security settings.</p>
+            <div className="mb-5 md:mb-8">
+              <h2 className="text-lg md:text-2xl font-bold text-gray-900">Account Settings</h2>
+              <p className="text-gray-500 text-xs md:text-sm mt-0.5 md:mt-1">Manage your personal information and security settings.</p>
             </div>
             
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
               {/* Profile Card */}
               <div className="lg:col-span-1">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center h-full">
-                  <div className="w-24 h-24 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full mx-auto flex items-center justify-center text-3xl font-bold text-white mb-4 shadow-lg">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6 text-center h-full">
+                  <div className="w-16 h-16 md:w-24 md:h-24 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full mx-auto flex items-center justify-center text-2xl md:text-3xl font-bold text-white mb-3 md:mb-4 shadow-lg">
                     {name.charAt(0).toUpperCase()}
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">{name}</h3>
-                  <p className="text-gray-500 text-sm mb-4">{email}</p>
-                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100">
+                  <h3 className="text-base md:text-xl font-bold text-gray-900">{name}</h3>
+                  <p className="text-gray-500 text-xs md:text-sm mb-3 md:mb-4">{email}</p>
+                  <div className="inline-flex items-center px-2.5 md:px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100">
                     <ShieldCheck className="w-3 h-3 mr-1" />
                     {session.user.role} Account
                   </div>

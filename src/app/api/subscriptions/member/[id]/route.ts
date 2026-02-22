@@ -9,7 +9,30 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     await dbConnect();
     
     const { id } = await params;
-    console.log('Fetching subscriptions for ID:', id);
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email'); // Support fetching by email via query param
+    
+    console.log('Fetching subscriptions for ID:', id, 'Email:', email);
+    
+    // If email is provided in query params, use it directly
+    if (email) {
+      const member = await Member.findOne({ email });
+      if (!member) {
+        console.log('No member found for email:', email);
+        return NextResponse.json([]);
+      }
+      
+      const subscriptions = await Subscription.find({ member: member._id })
+        .populate('location', 'name')
+        .populate('seat', 'seatNumber')
+        .populate('payments')
+        .sort({ createdAt: -1 });
+      
+      console.log('Found subscriptions by email:', subscriptions.length);
+      return NextResponse.json(subscriptions);
+    }
+    
+    // Otherwise, try to find member by ID using multiple methods
     
     // Try to find the member
     let member = null;

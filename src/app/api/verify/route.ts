@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
     const phone = searchParams.get('phone');
     const name = searchParams.get('name');
     const rawData = searchParams.get('data');
+    const hintsOnly = searchParams.get('hints') === 'true';
+    const q = searchParams.get('q'); // Unified search query
 
     let targetMemberId = memberId;
 
@@ -32,12 +34,42 @@ export async function GET(request: NextRequest) {
     const hasEmail = email && email.trim();
     const hasPhone = phone && phone.trim();
     const hasName = name && name.trim();
+    const hasQ = q && q.trim();
 
-    if (!hasMemberId && !hasEmail && !hasPhone && !hasName) {
+    if (!hasMemberId && !hasEmail && !hasPhone && !hasName && !hasQ) {
       return NextResponse.json(
         { error: 'Please provide Member ID, Email, Phone Number, or Name' },
         { status: 400 }
       );
+    }
+
+    // If hintsOnly=true, return autocomplete suggestions (searches across all fields)
+    if (hintsOnly) {
+      const searchTerm = (q || targetMemberId || '').trim();
+      if (!searchTerm) {
+        return NextResponse.json({ hints: [] });
+      }
+      
+      const partialMembers = await Member.find({
+        $or: [
+          { memberId: { $regex: new RegExp(searchTerm, 'i') } },
+          { email: { $regex: new RegExp(searchTerm, 'i') } },
+          { phone: { $regex: new RegExp(searchTerm, 'i') } },
+          { name: { $regex: new RegExp(searchTerm, 'i') } }
+        ]
+      })
+      .select('memberId name email phone')
+      .limit(10);
+
+      const hints = partialMembers.map(m => ({
+        memberId: m.memberId,
+        name: m.name,
+        email: m.email,
+        phone: m.phone,
+        displayText: `${m.memberId} - ${m.name} (${m.email})`
+      }));
+
+      return NextResponse.json({ hints });
     }
 
     await dbConnect();
