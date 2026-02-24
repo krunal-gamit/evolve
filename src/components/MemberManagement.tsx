@@ -431,7 +431,7 @@ export default function MemberManagement() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] py-6 flex flex-col">
+    <div className="min-h-screen dark:bg-black bg-[#F2F2F7] py-6 flex flex-col">
       <style jsx global>{`
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
