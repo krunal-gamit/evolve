@@ -106,13 +106,13 @@ export default function Header({ pageTitle }: HeaderProps) {
   // Fetch search hints for verify modal
   useEffect(() => {
     const fetchHints = async () => {
-      if (!showVerifyModal || verifyMemberId.trim().length < 2) {
+      if (!showVerifyModal || !verifyMemberId || verifyMemberId.trim().length < 2) {
         setVerifyHints([]);
         return;
       }
 
       try {
-        const response = await fetch(`/api/verify?q=${encodeURIComponent(verifyMemberId.trim())}&hints=true`);
+        const response = await fetch(`/api/verify?q=${encodeURIComponent((verifyMemberId || '').trim())}&hints=true`);
         const data = await response.json();
         if (response.ok) {
           setVerifyHints(data.hints || []);
