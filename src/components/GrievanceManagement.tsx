@@ -270,24 +270,24 @@ export default function GrievanceManagement() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
-            <div className="relative">
+            <div className="relative min-w-[180px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search grievances..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full"
               />
             </div>
             
             {/* Status Filter */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-[140px]">
               <Filter className="w-4 h-4 text-gray-400" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
               >
                 <option value="All">All Status</option>
                 <option value="Pending">Pending</option>
@@ -301,7 +301,7 @@ export default function GrievanceManagement() {
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 min-w-[140px]"
             >
               <option value="All">All Categories</option>
               {CATEGORIES.map(cat => (
@@ -379,27 +379,27 @@ export default function GrievanceManagement() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setViewGrievance(grievance)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                           title="View Details"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-5 h-5" />
                         </button>
                         {isAdminOrManager && grievance.status !== 'Resolved' && grievance.status !== 'Rejected' && (
                           <button
                             onClick={() => handleStatusUpdate(grievance._id, 'Resolved')}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            className="p-2 text-green-600 hover:bg-green-50 rounded"
                             title="Mark Resolved"
                           >
-                            <CheckCircle className="w-4 h-4" />
+                            <CheckCircle className="w-5 h-5" />
                           </button>
                         )}
                         {grievance.reportedBy?._id === session?.user?.id && (
                           <button
                             onClick={() => handleDelete(grievance._id)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            className="p-2 text-red-600 hover:bg-red-50 rounded"
                             title="Delete"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         )}
                       </div>

@@ -51,6 +51,7 @@ export default function SeatsPage() {
   const [prefillSeat, setPrefillSeat] = useState('');
   const [prefillLocation, setPrefillLocation] = useState<string | undefined>(undefined);
   const [isLocationLocked, setIsLocationLocked] = useState(false);
+  const [showOccupiedDetails, setShowOccupiedDetails] = useState(false);
 
   // Show loading or redirecting
   const showLoading = status === 'loading' || (session && isMember);
@@ -157,6 +158,7 @@ export default function SeatsPage() {
       setSubscriptionModalOpen(true);
     } else {
       setSelectedSeat(seat);
+      setShowOccupiedDetails(true);
     }
   };
 
@@ -421,8 +423,115 @@ export default function SeatsPage() {
               onLocationChange={setSelectedLocation}
             />
           </div>
-          </>
+
+          {/* Occupied Seat Details Modal */}
+          {showOccupiedDetails && selectedSeat && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowOccupiedDetails(false)} />
+              <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden z-10 transform scale-100">
+                {/* Header with gradient */}
+                <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-5 pt-4 pb-4 relative">
+                  {/* Close button */}
+                  <button
+                    onClick={() => setShowOccupiedDetails(false)}
+                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-2 rounded-2xl bg-white/10 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-white">Seat #{selectedSeat.seatNumber}</h3>
+                    <p className="text-slate-300 text-sm">{selectedSeat.assignedMember?.name || 'Occupied'}</p>
+                    
+                    {/* Status Badge */}
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full mt-3 ${selectedSeat.subscription?.status === 'active' ? 'bg-green-500/20' : 'bg-gray-500/20'}`}>
+                      {selectedSeat.subscription?.status === 'active' ? (
+                        <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                      <span className={`text-xs font-semibold ${selectedSeat.subscription?.status === 'active' ? 'text-green-400' : 'text-gray-400'}`}>
+                        {selectedSeat.subscription?.status === 'active' ? 'Active' : selectedSeat.subscription?.status || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Content */}
+                <div className="px-5 py-3 -mt-3 relative">
+                  <div className="space-y-2">
+                    {/* End Date */}
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                          <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 font-medium">End Date</p>
+                          <p className="text-sm font-semibold text-slate-800">
+                            {selectedSeat.subscription?.endDate ? new Date(selectedSeat.subscription.endDate).toLocaleDateString('en-GB') : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Location */}
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                          <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 font-medium">Location</p>
+                          <p className="text-sm font-semibold text-slate-800">{selectedSeat.location?.name || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Days Remaining */}
+                    {selectedSeat.subscription?.endDate && (
+                      <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-100">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${Math.ceil((new Date(selectedSeat.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) > 0 ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                            <svg className={`w-5 h-5 ${Math.ceil((new Date(selectedSeat.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) > 0 ? 'text-emerald-600' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-400 font-medium">Days Left</p>
+                            <p className={`text-sm font-bold ${Math.ceil((new Date(selectedSeat.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                              {Math.ceil((new Date(selectedSeat.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Close indicator */}
+                <div className="pb-4 text-center">
+                  <p className="text-xs text-slate-400">Tap outside to close</p>
+                </div>
+              </div>
+            </div>
           )}
+          </>)}
         </main>
         <Footer />
       </div>

@@ -374,18 +374,18 @@ export default function Reports() {
           <p className="mt-1 text-sm text-gray-500">Analyze financial performance.</p>
         </div>
         {!isMember && (
-          <div className="flex gap-4">
-            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex flex-col items-end">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</span>
-              <span className="text-xl font-bold text-green-600">₹{totalRevenue.toLocaleString()}</span>
+          <div className="flex flex-wrap gap-2 sm:gap-4">
+            <div className="bg-white px-3 sm:px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex flex-col items-end min-w-[100px] flex-1 sm:flex-initial">
+              <span className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</span>
+              <span className="text-sm sm:text-xl font-bold text-green-600 truncate max-w-full" title={`₹${totalRevenue.toLocaleString()}`}>₹{totalRevenue.toLocaleString()}</span>
             </div>
-            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex flex-col items-end">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Expenses</span>
-              <span className="text-xl font-bold text-red-600">₹{totalExpenses.toLocaleString()}</span>
+            <div className="bg-white px-3 sm:px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex flex-col items-end min-w-[100px] flex-1 sm:flex-initial">
+              <span className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Expenses</span>
+              <span className="text-sm sm:text-xl font-bold text-red-600 truncate max-w-full" title={`₹${totalExpenses.toLocaleString()}`}>₹{totalExpenses.toLocaleString()}</span>
             </div>
-            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex flex-col items-end">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Net Profit</span>
-              <span className={`text-xl font-bold ${netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>₹{netProfit.toLocaleString()}</span>
+            <div className="bg-white px-3 sm:px-4 py-2 rounded-xl shadow-sm border border-gray-200 flex flex-col items-end min-w-[100px] flex-1 sm:flex-initial">
+              <span className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Net Profit</span>
+              <span className={`text-sm sm:text-xl font-bold truncate max-w-full ${netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`} title={`₹${netProfit.toLocaleString()}`}>₹{netProfit.toLocaleString()}</span>
             </div>
           </div>
         )}

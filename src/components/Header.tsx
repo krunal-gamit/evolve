@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Toaster, toast } from 'react-hot-toast';
-import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck, CreditCard, Settings, ClipboardList, Calendar, Search, AlertCircle, CheckCircle, XCircle, Hash, Mail, Phone, Sun, Moon, Receipt, Package } from 'lucide-react';
+import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck, CreditCard, Settings, ClipboardList, Calendar, Search, AlertCircle, CheckCircle, XCircle, Hash, Mail, Phone, Sun, Moon, Receipt, Package, QrCode } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useTheme } from '@/context/ThemeContext';
+import QRScanner from './QRScanner';
 
 interface HeaderProps {
   pageTitle: string;
@@ -33,6 +34,7 @@ export default function Header({ pageTitle }: HeaderProps) {
   const [verifyError, setVerifyError] = useState('');
   const [verifyHints, setVerifyHints] = useState<SearchHint[]>([]);
   const [showVerifyHints, setShowVerifyHints] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -72,6 +74,11 @@ export default function Header({ pageTitle }: HeaderProps) {
     setVerifyError('');
     setVerifyHints([]);
     setShowVerifyHints(false);
+  };
+
+  const handleQRScan = (memberId: string) => {
+    setVerifyMemberId(memberId);
+    handleVerify();
   };
 
   useEffect(() => {
@@ -524,6 +531,13 @@ export default function Header({ pageTitle }: HeaderProps) {
                       </div>
                     )}
                   </div>
+                  <button 
+                    onClick={() => setShowQRScanner(true)}
+                    className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors"
+                    title="Scan QR Code"
+                  >
+                    <QrCode className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  </button>
                   <button onClick={handleVerify} disabled={verifyLoading} className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 text-sm font-medium disabled:opacity-50 shadow-md">
                     {verifyLoading ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : 'Verify'}
                   </button>
@@ -614,6 +628,12 @@ export default function Header({ pageTitle }: HeaderProps) {
           </div>
         </div>
       )}
+
+      <QRScanner
+        isOpen={showQRScanner}
+        onClose={() => setShowQRScanner(false)}
+        onScan={handleQRScan}
+      />
     </>
   );
 }

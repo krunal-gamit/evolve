@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/Footer';
-import { Search, CheckCircle, XCircle, AlertCircle, User, Calendar, IdCard } from 'lucide-react';
+import QRScanner from '@/components/QRScanner';
+import { Search, CheckCircle, XCircle, AlertCircle, User, Calendar, IdCard, QrCode } from 'lucide-react';
 
 interface SearchHint {
   memberId: string;
@@ -47,6 +48,7 @@ export default function QRScannerPage() {
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const hintsRef = useRef<HTMLDivElement>(null);
 
@@ -146,6 +148,11 @@ export default function QRScannerPage() {
     verifyMember(hint.memberId);
   };
 
+  const handleQRScan = (memberId: string) => {
+    setSearchInput(memberId);
+    verifyMember(memberId);
+  };
+
   if (status === 'loading' || !session) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
@@ -213,6 +220,15 @@ export default function QRScannerPage() {
                       </div>
                     )}
                   </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setShowScanner(true)}
+                    className="p-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition-all"
+                    title="Scan QR Code"
+                  >
+                    <QrCode className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                  </button>
                   
                   <button
                     type="submit"
@@ -334,6 +350,11 @@ export default function QRScannerPage() {
           </div>
         </main>
         <Footer />
+        <QRScanner
+          isOpen={showScanner}
+          onClose={() => setShowScanner(false)}
+          onScan={handleQRScan}
+        />
       </div>
     </div>
   );
