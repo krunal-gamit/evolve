@@ -6,7 +6,9 @@ import Sidebar from './Sidebar';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import QRCodeModal from './QRCodeModal';
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Bell, MapPin, IdCard } from 'lucide-react';
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Bell, MapPin, IdCard, Receipt, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Subscription {
   _id: string;
@@ -25,6 +27,7 @@ interface Payment {
   amount: number;
   dateTime: string;
   method: string;
+  uniqueCode: string;
 }
 
 interface Member {
@@ -60,6 +63,8 @@ export default function MemberDashboard() {
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -119,6 +124,81 @@ export default function MemberDashboard() {
       fetchMemberData();
     }
   }, [session]);
+
+  const fetchPaymentHistory = async () => {
+    if (!member?.memberId) return;
+    try {
+      const res = await fetch(`/api/payments/member/${member.memberId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPaymentHistory(data.payments || []);
+        setShowPaymentHistory(true);
+      }
+    } catch (error) {
+      console.error('Error fetching payment history:', error);
+    }
+  };
+
+  const downloadInvoice = async (payment: any) => {
+    try {
+      const res = await fetch(`/api/payments/member/${member?.memberId}/invoice?paymentId=${payment._id}&type=single`);
+      if (!res.ok) return;
+      
+      const invoiceData = await res.json();
+      const doc = new jsPDF();
+      
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INVOICE', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Invoice Number: ${invoiceData.invoiceNumber}`, 14, 35);
+      doc.text(`Date: ${invoiceData.invoiceDate}`, 14, 42);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('From:', 14, 55);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoiceData.organization.name, 14, 62);
+      if (invoiceData.organization.address) {
+        doc.text(invoiceData.organization.address, 14, 69);
+      }
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Bill To:', 120, 55);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoiceData.member.name, 120, 62);
+      doc.text(`Member ID: ${invoiceData.member.memberId}`, 120, 69);
+      doc.text(`Email: ${invoiceData.member.email}`, 120, 76);
+      
+      const tableData = invoiceData.payments.map((p: any) => [
+        new Date(p.dateTime).toLocaleDateString('en-IN'),
+        p.subscriptionDetails.duration,
+        p.method,
+        `₹${p.amount.toLocaleString()}`
+      ]);
+      
+      autoTable(doc, {
+        startY: 85,
+        head: [['Date', 'Duration', 'Method', 'Amount']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185] },
+      });
+      
+      const finalY = (doc as any).lastAutoTable.finalY + 10;
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Total: ₹${invoiceData.summary.total.toLocaleString()}`, 14, finalY);
+      
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.text('Thank you for your payment!', 105, 280, { align: 'center' });
+      
+      doc.save(`invoice_${invoiceData.invoiceNumber}.pdf`);
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+    }
+  };
 
   if (status === 'loading' || loading) {
     return (
@@ -339,6 +419,51 @@ export default function MemberDashboard() {
                 <AlertCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                 <h3 className="text-sm font-semibold text-gray-900 mb-1">No Subscriptions Found</h3>
                 <p className="text-xs text-gray-500">Contact the administrator to get started.</p>
+              </div>
+            )}
+
+            {/* Payment History Section */}
+            {member && (
+              <div className="mb-4">
+                <button
+                  onClick={fetchPaymentHistory}
+                  className="flex items-center space-x-2 text-lg font-bold text-gray-800 mb-3 hover:text-blue-600 transition-colors"
+                >
+                  <Receipt className="w-5 h-5" />
+                  <span>Payment History</span>
+                </button>
+                
+                {showPaymentHistory && (
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+                    {paymentHistory.length > 0 ? (
+                      <div className="divide-y divide-gray-100">
+                        {paymentHistory.slice(0, 5).map((payment) => (
+                          <div key={payment._id} className="p-3 flex items-center justify-between hover:bg-gray-50">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                ₹{payment.amount.toLocaleString('en-IN')}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(payment.dateTime).toLocaleDateString('en-IN')} • {payment.method}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => downloadInvoice(payment)}
+                              className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Download Invoice"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-6 text-center text-gray-500 text-sm">
+                        No payment history available
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

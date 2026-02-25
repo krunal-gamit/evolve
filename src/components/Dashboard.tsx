@@ -627,7 +627,7 @@ export default function Dashboard() {
           </div>
 
           {/* Top Expenses Breakdown */}
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[320px]">
+          <div className="ios-card-glass p-4 flex flex-col min-h-[320px] dark:!bg-[#1c1c1e]">
              <h2 className="text-base font-bold text-gray-900 mb-4">Top Expenses</h2>
              <div className="space-y-3 overflow-y-auto flex-1 pr-2 min-h-0">
                 {expenseCategoryData.map((category, index) => (
@@ -646,7 +646,7 @@ export default function Dashboard() {
           </div>
 
           {/* Recent Transactions */}
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[320px]">
+          <div className="ios-card-glass p-4 flex flex-col min-h-[320px] dark:!bg-[#1c1c1e]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-gray-900">Transactions</h2>
               <Link href="/reports" className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center transition-colors">
@@ -675,7 +675,7 @@ export default function Dashboard() {
           </div>
 
           {/* Student Exam Focus */}
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[320px]">
+          <div className="ios-card-glass p-4 flex flex-col min-h-[320px] dark:!bg-[#1c1c1e]">
             <h2 className="text-base font-bold text-gray-900 mb-4">Exam Focus</h2>
             <div className="space-y-4 overflow-y-auto flex-1 pr-2 min-h-0" style={{ maxHeight: '250px' }}>
               {examData.map((exam, index) => (

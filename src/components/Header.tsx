@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Toaster, toast } from 'react-hot-toast';
-import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck, CreditCard, Settings, ClipboardList, Calendar, Search, AlertCircle, CheckCircle, XCircle, Hash, Mail, Phone } from 'lucide-react';
+import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck, CreditCard, Settings, ClipboardList, Calendar, Search, AlertCircle, CheckCircle, XCircle, Hash, Mail, Phone, Sun, Moon } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
+import { useTheme } from '@/context/ThemeContext';
 
 interface HeaderProps {
   pageTitle: string;
@@ -20,6 +21,7 @@ interface SearchHint {
 
 export default function Header({ pageTitle }: HeaderProps) {
   const { data: session } = useSession();
+  const { theme, toggleTheme } = useTheme();
   const isMember = session?.user.role === 'Member';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', examPrep: '' });
@@ -106,13 +108,13 @@ export default function Header({ pageTitle }: HeaderProps) {
   // Fetch search hints for verify modal
   useEffect(() => {
     const fetchHints = async () => {
-      if (!showVerifyModal || verifyMemberId.trim().length < 2) {
+      if (!showVerifyModal || !verifyMemberId || verifyMemberId.trim().length < 2) {
         setVerifyHints([]);
         return;
       }
 
       try {
-        const response = await fetch(`/api/verify?q=${encodeURIComponent(verifyMemberId.trim())}&hints=true`);
+        const response = await fetch(`/api/verify?q=${encodeURIComponent((verifyMemberId || '').trim())}&hints=true`);
         const data = await response.json();
         if (response.ok) {
           setVerifyHints(data.hints || []);
@@ -190,7 +192,7 @@ export default function Header({ pageTitle }: HeaderProps) {
     <>
       <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
       {/* Top Header - iOS Style with Glassmorphism */}
-      <header className="glass sticky top-0 z-30 h-12 md:h-14 flex items-center justify-between px-3 md:px-4">
+      <header className="glass dark:glass-dark sticky top-0 z-30 h-12 md:h-14 flex items-center justify-between px-3 md:px-4">
         <div className="flex items-center">
           <button
             className="lg:hidden mr-3 p-1.5 rounded-lg hover:bg-black/5"
@@ -198,19 +200,31 @@ export default function Header({ pageTitle }: HeaderProps) {
           >
             <Menu size={18} />
           </button>
-          <h1 className="text-base font-semibold text-gray-800">{pageTitle}</h1>
+          <h1 className="text-base font-semibold text-gray-800 dark:text-white">{pageTitle}</h1>
         </div>
         <div className="flex items-center gap-2">
           {!isMember && <button onClick={() => setShowModal(true)} className="hidden sm:flex items-center px-3 py-1.5 bg-[#007AFF] text-white rounded-lg hover:bg-[#0066CC] transition-all duration-200 text-sm font-medium">
             <UserPlus size={14} className="mr-1.5" />
             <span className="hidden md:inline">Add</span>
           </button>}
-          {!isMember && <button onClick={() => setShowVerifyModal(true)} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" title="Verify Member">
-            <Search size={16} className="text-gray-600" />
+          {!isMember && <button onClick={() => setShowVerifyModal(true)} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors" title="Verify Member">
+            <Search size={16} className="text-gray-600 dark:text-gray-300" />
           </button>}
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? (
+              <Sun size={18} className="text-yellow-500" />
+            ) : (
+              <Moon size={18} className="text-gray-600 dark:text-gray-300" />
+            )}
+          </button>
           <div className="relative" ref={notificationRef}>
-            <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="p-1.5 rounded-full hover:bg-gray-100 relative transition-colors">
-              <Bell size={18} className="text-gray-600" />
+            <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 relative transition-colors">
+              <Bell size={18} className="text-gray-600 dark:text-gray-300" />
               {unreadCount > 0 && (
                 <span className="absolute top-0.5 right-0.5 bg-[#FF3B30] text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white">
                   {unreadCount}
@@ -241,13 +255,13 @@ export default function Header({ pageTitle }: HeaderProps) {
           <div className="relative" ref={userMenuRef}>
             <button 
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+              className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#007AFF] to-[#5856D6] flex items-center justify-center text-xs font-semibold text-white">
                 {session?.user.name?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div className="hidden sm:flex flex-col items-start leading-tight">
-                <span className="font-semibold text-sm text-gray-800">{session?.user.name}</span>
+                <span className="font-semibold text-sm text-gray-800 dark:text-white">{session?.user.name}</span>
               </div>
             </button>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Users, CreditCard, BarChart3, MapPin, IndianRupee, BookOpen, User, UserCheck, ClipboardList, Settings, Calendar, Search } from 'lucide-react';
+import { Home, Users, CreditCard, BarChart3, MapPin, IndianRupee, BookOpen, User, UserCheck, ClipboardList, Settings, Calendar, Search, Receipt } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
@@ -78,6 +78,11 @@ export default function Sidebar() {
               <CreditCard size={16} className="md:hidden" />
               <CreditCard size={18} className="hidden md:block" />
               <span>Fee Types</span>
+            </Link>
+            <Link href="/payment-history" className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-xs md:text-sm">
+              <Receipt size={16} className="md:hidden" />
+              <Receipt size={18} className="hidden md:block" />
+              <span>Payment History</span>
             </Link>
           </>
         )}
