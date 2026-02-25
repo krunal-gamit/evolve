@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Toaster, toast } from 'react-hot-toast';
-import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck, CreditCard, Settings, ClipboardList, Calendar, Search, AlertCircle, CheckCircle, XCircle, Hash, Mail, Phone, Sun, Moon } from 'lucide-react';
+import { Menu, Bell, UserPlus, BookOpen, Home, MapPin, Users, IndianRupee, BarChart3, X, LogOut, User, UserCheck, CreditCard, Settings, ClipboardList, Calendar, Search, AlertCircle, CheckCircle, XCircle, Hash, Mail, Phone, Sun, Moon, Receipt, Package } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -325,6 +325,9 @@ export default function Header({ pageTitle }: HeaderProps) {
                   <Link href="/profile" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
                     <User size={18} /> <span>Profile</span>
                   </Link>
+                  <Link href="/grievances" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                    <AlertCircle size={18} /> <span>Grievances</span>
+                  </Link>
                 </>
               ) : (
                 <>
@@ -342,6 +345,20 @@ export default function Header({ pageTitle }: HeaderProps) {
                   </Link>
                   <Link href="/fees" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
                     <CreditCard size={18} /> <span>Fee Types</span>
+                  </Link>
+                  <Link href="/payment-history" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                    <Receipt size={18} /> <span>Payment History</span>
+                  </Link>
+                </>
+              )}
+
+              {(session?.user.role === 'Admin' || session?.user.role === 'Manager') && (
+                <>
+                  <Link href="/grievances" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                    <AlertCircle size={18} /> <span>Grievances</span>
+                  </Link>
+                  <Link href="/admin/inventory" className="flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-sm" onClick={() => setSidebarOpen(false)}>
+                    <Package size={18} /> <span>Inventory</span>
                   </Link>
                 </>
               )}

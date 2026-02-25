@@ -41,6 +41,12 @@ export async function GET(request: NextRequest) {
       memberIds = members.map((m: any) => m._id.toString());
     }
 
+    // If user is a Manager with specific location assignments, restrict to those locations
+    let managerLocations: string[] = [];
+    if (session?.user?.role === 'Manager' && session.user.locations) {
+      managerLocations = session.user.locations;
+    }
+
     // Build subscription filter
     let subscriptionFilter: Record<string, any> = {};
     if (memberIds.length > 0) {
@@ -48,11 +54,15 @@ export async function GET(request: NextRequest) {
     }
     if (locationId) {
       subscriptionFilter.location = locationId;
+    } else if (managerLocations.length > 0) {
+      // Managers can only see payments from their assigned locations
+      subscriptionFilter.location = { $in: managerLocations };
     }
 
     const subscriptions = await Subscription.find(subscriptionFilter)
       .populate('member', 'name email memberId phone')
       .populate('location', 'name')
+      .populate('payments')
       .sort({ createdAt: -1 })
       .limit(limit);
 
@@ -61,7 +71,9 @@ export async function GET(request: NextRequest) {
     const subscriptionMap = new Map();
 
     for (const sub of subscriptions) {
-      for (const paymentId of sub.payments || []) {
+      for (const payment of sub.payments || []) {
+        // If payments are populated, use payment._id, otherwise use payment directly (ObjectId)
+        const paymentId = typeof payment === 'object' && payment._id ? payment._id : payment;
         paymentIds.push(paymentId);
         subscriptionMap.set(paymentId.toString(), {
           subscription: sub,

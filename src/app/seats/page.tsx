@@ -164,7 +164,7 @@ export default function SeatsPage() {
     <div className="flex h-screen">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header pageTitle="Facility Dashboard" />
+        <Header pageTitle="Subscriptions" />
         <style jsx global>{`
           /* For Webkit-based browsers (Chrome, Safari) */
           ::-webkit-scrollbar { width: 8px; height: 8px; }

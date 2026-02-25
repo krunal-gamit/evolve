@@ -392,7 +392,7 @@ export default function ExpenseManagement() {
               Expense Records
             </h2>
             <p className="mt-1 text-xs md:text-sm text-gray-500">
-              Track and manage all gym expenses.
+              Track and manage all of your expenses.
             </p>
           </div>
           <div className="mt-4 md:mt-0 md:ml-4 gap-2 md:gap-4 flex flex-col md:flex-row w-full md:w-auto">

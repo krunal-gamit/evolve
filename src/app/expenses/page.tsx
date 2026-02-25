@@ -17,7 +17,7 @@ export default async function ExpensesPage() {
     <div className="flex h-screen">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header pageTitle="Expense Management" />
+        <Header pageTitle="Expenses" />
         <main className="flex-1 overflow-y-auto bg-gradient-to-br from-[#F2F2F7] via-[#E8E8ED] to-[#F2F2F7]">
             <ExpenseManagement />
         </main>

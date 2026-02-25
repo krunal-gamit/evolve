@@ -370,7 +370,7 @@ export default function Reports() {
       <div className="flex-1">
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+          <h1 className="text-2xl font-bold text-gray-900">View Reports</h1>
           <p className="mt-1 text-sm text-gray-500">Analyze financial performance.</p>
         </div>
         {!isMember && (
