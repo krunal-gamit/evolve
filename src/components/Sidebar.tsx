@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Users, CreditCard, BarChart3, MapPin, IndianRupee, BookOpen, User, UserCheck, ClipboardList, Settings, Calendar, Search, Receipt, Package, AlertCircle } from 'lucide-react';
+import { Home, Users, CreditCard, BarChart3, MapPin, IndianRupee, BookOpen, User, UserCheck, ClipboardList, Settings, Calendar, Search, Receipt, Package, AlertCircle, Bell } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
@@ -46,6 +46,11 @@ export default function Sidebar() {
 
         {isMember ? (
           <>
+            <Link href="/notifications" className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-xs md:text-sm">
+              <Bell size={16} className="md:hidden" />
+              <Bell size={18} className="hidden md:block" />
+              <span>Notifications</span>
+            </Link>
             <Link href="/profile" className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-xs md:text-sm">
               <User size={16} className="md:hidden" />
               <User size={18} className="hidden md:block" />
@@ -94,6 +99,11 @@ export default function Sidebar() {
 
         {(session?.user.role === 'Admin' || session?.user.role === 'Manager') && (
           <>
+            <Link href="/admin/notifications" className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-xs md:text-sm">
+              <Bell size={16} className="md:hidden" />
+              <Bell size={18} className="hidden md:block" />
+              <span>Notifications</span>
+            </Link>
             <Link href="/grievances" className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-xs md:text-sm">
               <AlertCircle size={16} className="md:hidden" />
               <AlertCircle size={18} className="hidden md:block" />
@@ -109,11 +119,6 @@ export default function Sidebar() {
 
         {session?.user.role === 'Admin' && (
           <>
-            <Link href="/grievances" className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-xs md:text-sm">
-              <AlertCircle size={16} className="md:hidden" />
-              <AlertCircle size={18} className="hidden md:block" />
-              <span>Grievances</span>
-            </Link>
             <Link href="/admin/settings" className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-2 md:py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 text-xs md:text-sm">
               <Settings size={16} className="md:hidden" />
               <Settings size={18} className="hidden md:block" />

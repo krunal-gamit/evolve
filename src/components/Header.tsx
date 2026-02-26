@@ -105,7 +105,12 @@ export default function Header({ pageTitle }: HeaderProps) {
       const res = await fetch('/api/notifications');
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data);
+        // Handle both array (backwards) and object response
+        if (Array.isArray(data)) {
+          setNotifications(data);
+        } else {
+          setNotifications(data.notifications || []);
+        }
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -253,7 +258,7 @@ export default function Header({ pageTitle }: HeaderProps) {
                   ))}
                   {notifications.length === 0 && <p className="p-4 text-center text-gray-500 text-sm">No new notifications.</p>}
                 </div>
-                <div className="p-2 bg-gray-50 text-center"><Link href="/admin/notifications" className="text-xs font-medium text-[#007AFF] hover:underline">View all</Link></div>
+                <div className="p-2 bg-gray-50 text-center"><Link href={isMember ? "/notifications" : "/admin/notifications"} className="text-xs font-medium text-[#007AFF] hover:underline">View all</Link></div>
               </div>
             )}
           </div>

@@ -35,7 +35,12 @@ export default function NotificationsPage() {
     const res = await fetch('/api/notifications');
     if (res.ok) {
       const data = await res.json();
-      setNotifications(data);
+      // Handle both array and object response
+      if (Array.isArray(data)) {
+        setNotifications(data);
+      } else {
+        setNotifications(data.notifications || []);
+      }
     }
   };
 
